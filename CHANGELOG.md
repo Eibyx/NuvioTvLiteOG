@@ -24,20 +24,16 @@ Lite numbering restarted at 2.0.0 after 1.4.10; it is independent of upstream's 
 - [upstream] MDBList dynamic and liked lists appear in the Library. @kernexshadow
 - [upstream] Frame rate matching prefers clean refresh multiples and reruns after episode or source switches. @ysosrs123
 - [upstream] Playback sockets use TCP_NODELAY and a larger receive window, and parallel chunks live off the Java heap. @ysosrs123
-- [upstream] Trailers back off on YouTube rate limits, skip unsupported codecs, and gain a 4K Trailers setting. @kernexshadow
 - [upstream] Modern home uses a lighter card and no longer recomposes on every D-pad move. @deejay189393
 - [upstream] Subtitles stay above the player controls and the next-episode card, and their offset previews in the overlay. @ram130 @halibiram
 - [upstream] Fixes for audio fallback loops, stale filenames after a stream switch, usenet failover info and torrent recovery. @kernexshadow
-- [upstream] Trakt keeps Continue Watching when a progress request fails and skips redundant refreshes. @kernexshadow
 - [upstream] Binge-group selection matches on filename, and episodes can be stepped through in the options overlay. @skoruppa @ram130
 - [upstream] Translation updates for Hungarian, Italian, Polish, Turkish, Greek, Hebrew and more. @peterdeme @WhiteGiso @skoruppa @halibiram @nosvasedis @blueocean2308 @uHleaf
 
 ### Upstream's new work kept off the hot path
 - Ambient Mode fetches its slides 30 seconds before the screensaver starts instead of on every launch.
 - Media-server sync services start on a background thread instead of during app startup.
-- Trailer settings collectors run only on builds that play trailers in-app.
-- Server catalogs bypass the add-on catalog cache, and the 4K trailer default reads the cached RAM tier.
-- A cancelled Trakt refresh no longer surfaces as an error and is refetched on the next poll.
+- Media-server catalogs bypass the add-on catalog cache.
 
 ## v2.2.0-lite — 2026-10-07
 
