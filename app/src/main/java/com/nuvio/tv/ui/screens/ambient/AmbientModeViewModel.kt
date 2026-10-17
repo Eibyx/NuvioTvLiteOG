@@ -8,20 +8,14 @@ import com.nuvio.tv.domain.model.AmbientModeSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-private const val PRELOAD_DELAY_MS = 20_000L
 private const val REFRESH_INTERVAL_MS = 30L * 60_000L
 
 @HiltViewModel
@@ -41,17 +35,11 @@ class AmbientModeViewModel @Inject constructor(
     private var loadedKeys: List<String>? = null
     private var loadedAt = 0L
 
-    init {
-        viewModelScope.launch {
-            settings
-                .filter { it.enabled }
-                .map { it.catalogKeys }
-                .distinctUntilChanged()
-                .collectLatest { keys ->
-                    delay(PRELOAD_DELAY_MS)
-                    refresh(keys)
-                }
-        }
+    // Called shortly before the idle timeout, so sessions that never go idle fetch nothing.
+    fun preload() {
+        val keys = settings.value.catalogKeys
+        val stale = SystemClock.elapsedRealtime() - loadedAt > REFRESH_INTERVAL_MS
+        if (keys != loadedKeys || stale || _slides.value.isEmpty()) refresh(keys)
     }
 
     fun onShown() {

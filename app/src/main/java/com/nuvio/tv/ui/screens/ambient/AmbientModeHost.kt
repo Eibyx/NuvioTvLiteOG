@@ -22,6 +22,8 @@ import androidx.lifecycle.compose.currentStateAsState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 
+private const val AMBIENT_PRELOAD_LEAD_MS = 30_000L
+
 @Composable
 fun AmbientModeHost(
     controller: AmbientIdleController,
@@ -42,6 +44,8 @@ fun AmbientModeHost(
             return@LaunchedEffect
         }
         controller.lastInteractionAt.collectLatest { interactedAt ->
+            delay(interactedAt + timeoutMs - AMBIENT_PRELOAD_LEAD_MS - SystemClock.uptimeMillis())
+            viewModel.preload()
             delay(interactedAt + timeoutMs - SystemClock.uptimeMillis())
             controller.show()
         }
