@@ -190,13 +190,20 @@ fun GridHomeContent(
 
     // Offset for section indices: pre-items + continue watching item (if present)
     val gridItems = uiState.gridItems
-    val continueWatchingItems = if (uiState.continueWatchingEnabled)
-        remember(uiState.continueWatchingItems, uiState.customPosterUrlPattern, uiState.customPosterEnabledScreens) {
+    val continueWatchingItems = remember(
+        uiState.continueWatchingEnabled,
+        uiState.continueWatchingItems,
+        uiState.customPosterUrlPattern,
+        uiState.customPosterEnabledScreens,
+    ) {
+        if (uiState.continueWatchingEnabled) {
             uiState.continueWatchingItems.withCustomPosterUrls(
                 com.nuvio.tv.core.poster.patternForScreen(uiState.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, uiState.customPosterEnabledScreens)
             )
+        } else {
+            emptyList()
         }
-    else emptyList()
+    }
     val continueWatchingOffset = if (continueWatchingItems.isNotEmpty()) 1 else 0
 
     LaunchedEffect(gridItems, gridFocusState.hasSavedFocus, gridFocusState.focusedItemKey) {
@@ -600,7 +607,11 @@ fun GridHomeContent(
                     GridContinueWatchingSection(
                         modifier = Modifier.fillMaxWidth(),
                         fullWidth = gridWidth,
-                        items = remember(uiState.upcomingItems, uiState.customPosterUrlPattern, uiState.customPosterEnabledScreens) {
+                        items = remember(
+                            uiState.upcomingItems,
+                            uiState.customPosterUrlPattern,
+                            uiState.customPosterEnabledScreens,
+                        ) {
                             uiState.upcomingItems.withCustomPosterUrls(
                                 com.nuvio.tv.core.poster.patternForScreen(uiState.customPosterUrlPattern, com.nuvio.tv.core.poster.CustomPosterScreen.CONTINUE_WATCHING, uiState.customPosterEnabledScreens)
                             )

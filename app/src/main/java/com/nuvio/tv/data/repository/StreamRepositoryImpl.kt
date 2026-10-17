@@ -14,6 +14,10 @@ import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.core.tmdb.TmdbService
 import com.nuvio.tv.data.local.DebridSettingsDataStore
 import com.nuvio.tv.data.mapper.toDomain
+import com.nuvio.tv.data.mediaserver.ServerStreamSource
+import com.nuvio.tv.data.mediaserver.ServerStreams
+import com.nuvio.tv.data.mediaserver.messageRes
+import com.nuvio.tv.data.mediaserver.serverFailure
 import com.nuvio.tv.data.remote.api.AddonApi
 import com.nuvio.tv.domain.model.Addon
 import com.nuvio.tv.domain.model.AddonStreams
@@ -57,7 +61,8 @@ class StreamRepositoryImpl @Inject constructor(
     private val debridSettingsDataStore: DebridSettingsDataStore,
     private val tmdbService: TmdbService,
     private val debridStreamPresentation: DebridStreamPresentation,
-    private val localDebridAvailabilityService: LocalDebridAvailabilityService
+    private val localDebridAvailabilityService: LocalDebridAvailabilityService,
+    private val serverStreams: ServerStreams
 ) : StreamRepository {
     private val streamSearchSessions = StreamSearchSessionCache()
     private val localPluginSearchPaused = MutableStateFlow(false)
@@ -95,23 +100,8 @@ class StreamRepositoryImpl @Inject constructor(
         forceRefresh: Boolean
     ): Flow<NetworkResult<List<AddonStreams>>> = flow {
         val sourceConfiguration = captureSourceConfiguration()
-        val requestKey = StreamSearchRequestKey(
-            profileId = sourceConfiguration.profileId,
-            type = type.lowercase(),
-            videoId = videoId,
-            season = season,
-            episode = episode,
-            sourceConfiguration = buildSourceConfigurationKey(
-                addons = sourceConfiguration.addons,
-                pluginsEnabled = sourceConfiguration.pluginsEnabled,
-                enabledScrapers = sourceConfiguration.enabledScrapers,
-                groupPluginsByRepository = sourceConfiguration.groupPluginsByRepository,
-                pluginRepositories = sourceConfiguration.pluginRepositories,
-                debridPresentationConfiguration = sourceConfiguration.debridSettings
-                    .withoutRawCredentials()
-                    .toString()
-            )
-        )
+        val isNativeServerRequest = serverStreams.isNativeRequest(videoId)
+        val requestKey = buildStreamSearchRequestKey(sourceConfiguration, type, videoId, season, episode)
 
         emitAll(
             streamSearchSessions.observe(
@@ -123,14 +113,50 @@ class StreamRepositoryImpl @Inject constructor(
                     videoId = videoId,
                     season = season,
                     episode = episode,
-                    addons = sourceConfiguration.addons,
+                    addons = if (isNativeServerRequest) emptyList() else sourceConfiguration.addons,
                     debridSettings = sourceConfiguration.debridSettings,
-                    hasCompatiblePlugins = sourceConfiguration.pluginsEnabled &&
-                        sourceConfiguration.enabledScrapers.any { scraper -> scraper.supportsType(type) }
+                    hasCompatiblePlugins = !isNativeServerRequest &&
+                        sourceConfiguration.pluginsEnabled &&
+                        sourceConfiguration.enabledScrapers.any { scraper -> scraper.supportsType(type) },
+                    serverSources = serverStreams.sources(type, videoId, season, episode, forceRefresh)
                 )
             }
         )
     }
+
+    override suspend fun getCachedStreamsFromAllAddons(
+        type: String,
+        videoId: String,
+        season: Int?,
+        episode: Int?
+    ): List<AddonStreams>? = streamSearchSessions.peek(
+        buildStreamSearchRequestKey(captureSourceConfiguration(), type, videoId, season, episode)
+    )
+
+    private fun buildStreamSearchRequestKey(
+        sourceConfiguration: StreamSourceConfigurationSnapshot,
+        type: String,
+        videoId: String,
+        season: Int?,
+        episode: Int?
+    ): StreamSearchRequestKey = StreamSearchRequestKey(
+        profileId = sourceConfiguration.profileId,
+        type = type.lowercase(),
+        videoId = videoId,
+        season = season,
+        episode = episode,
+        sourceConfiguration = buildSourceConfigurationKey(
+            addons = sourceConfiguration.addons,
+            pluginsEnabled = sourceConfiguration.pluginsEnabled,
+            enabledScrapers = sourceConfiguration.enabledScrapers,
+            groupPluginsByRepository = sourceConfiguration.groupPluginsByRepository,
+            pluginRepositories = sourceConfiguration.pluginRepositories,
+            debridPresentationConfiguration = sourceConfiguration.debridSettings
+                .withoutRawCredentials()
+                .toString(),
+            serverRevision = serverStreams.revision
+        )
+    )
 
     private suspend fun captureSourceConfiguration(): StreamSourceConfigurationSnapshot {
         while (true) {
@@ -164,7 +190,8 @@ class StreamRepositoryImpl @Inject constructor(
         episode: Int?,
         addons: List<Addon>,
         debridSettings: DebridSettings,
-        hasCompatiblePlugins: Boolean
+        hasCompatiblePlugins: Boolean,
+        serverSources: List<ServerStreamSource>
     ): Flow<NetworkResult<List<AddonStreams>>> = flow {
         emit(NetworkResult.Loading)
 
@@ -174,7 +201,7 @@ class StreamRepositoryImpl @Inject constructor(
                 addon.supportsStreamResource(type, videoId)
             }
 
-            val attemptedAddonNames = streamAddons.map { it.displayName }
+            val attemptedAddonNames = streamAddons.map { it.displayName } + serverSources.map { it.name }
             val attemptedFailures = java.util.Collections.synchronizedList(
                 mutableListOf<StreamAttemptFailure>()
             )
@@ -187,7 +214,7 @@ class StreamRepositoryImpl @Inject constructor(
                 val resultChannel = Channel<AddonStreams>(Channel.UNLIMITED)
                 
                 // Track number of pending jobs
-                val totalJobs = streamAddons.size + 1
+                val totalJobs = streamAddons.size + 1 + serverSources.size
                 val completedJobs = java.util.concurrent.atomic.AtomicInteger(0)
 
                 // Launch addon jobs, bounded so a large addon list can't hold every
@@ -243,6 +270,34 @@ class StreamRepositoryImpl @Inject constructor(
                                 addonName = addon.displayName,
                                 kind = StreamFailureKind.REQUEST_FAILED,
                                 detail = e.message ?: context.getString(com.nuvio.tv.R.string.stream_error_detail_addon_request_failed)
+                            )
+                        } finally {
+                            if (completedJobs.incrementAndGet() >= totalJobs) {
+                                resultChannel.close()
+                            }
+                        }
+                    }
+                }
+
+                serverSources.forEach { source ->
+                    launch {
+                        try {
+                            val streams = source.load()
+                            if (streams.isNotEmpty()) {
+                                resultChannel.send(AddonStreams(addonName = source.name, addonLogo = null, streams = streams))
+                            } else {
+                                attemptedFailures += StreamAttemptFailure(
+                                    addonName = source.name,
+                                    kind = StreamFailureKind.MISSING,
+                                    detail = context.getString(R.string.stream_error_detail_no_streams_for_id)
+                                )
+                            }
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            attemptedFailures += StreamAttemptFailure(
+                                addonName = source.name,
+                                kind = StreamFailureKind.REQUEST_FAILED,
+                                detail = context.getString(e.serverFailure().messageRes())
                             )
                         } finally {
                             if (completedJobs.incrementAndGet() >= totalJobs) {
@@ -325,7 +380,8 @@ class StreamRepositoryImpl @Inject constructor(
         enabledScrapers: List<ScraperInfo>,
         groupPluginsByRepository: Boolean,
         pluginRepositories: List<PluginRepository>,
-        debridPresentationConfiguration: String
+        debridPresentationConfiguration: String,
+        serverRevision: Int
     ): String = buildString {
         append("addons:")
         addons.forEach { addon ->
@@ -342,6 +398,7 @@ class StreamRepositoryImpl @Inject constructor(
             }
         }
         append("|debrid:").append(debridPresentationConfiguration)
+        append("|servers:").append(serverRevision)
     }.sha256()
 
     private fun DebridSettings.withoutRawCredentials(): DebridSettings = copy(
@@ -549,6 +606,7 @@ class StreamRepositoryImpl @Inject constructor(
             ?: url
             ?: externalUrl
             ?: ytId
+            ?: serverTarget?.key()
             ?: "${addonName}:${name}:${title}"
         val nameSuffix = if (base == url) {
             val discriminator = name?.takeIf { it.isNotBlank() }

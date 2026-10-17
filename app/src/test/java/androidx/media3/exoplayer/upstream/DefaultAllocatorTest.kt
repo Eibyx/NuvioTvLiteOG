@@ -4,7 +4,6 @@ import androidx.media3.common.NuvioEngineConfig
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 
 class DefaultAllocatorTest {
@@ -21,17 +20,7 @@ class DefaultAllocatorTest {
     }
 
     @Test
-    @Ignore(
-        "Engine behavior in app/libs/lib-exoplayer-release.aar: release() repools the segment " +
-            "and calls notifyAll() but never trim(), and setTargetBufferSize only trims when the " +
-            "target actually drops — so segments released after reset() stay pooled until the " +
-            "next reduction. Real, but inert here: both call sites " +
-            "(PlayerRuntimeControllerInitialization, TrailerPlayerPool) build a fresh allocator " +
-            "per playback and drop it with its LoadControl, so nothing accumulates across " +
-            "playbacks. Fix belongs in the media3 fork, whose source is not in this repo. " +
-            "Unignore once the engine AAR is rebuilt."
-    )
-    fun testLateReleasedAllocationsMemoryLeak() {
+    fun testLateReleasedAllocationsAreFreedOnTrim() {
         val segmentSize = 65536
         // Initialize allocator with trimOnReset = true
         val allocator = DefaultAllocator(true, segmentSize, 0, true)
@@ -52,8 +41,11 @@ class DefaultAllocatorTest {
         allocator.release(a2)
         allocator.release(a3)
 
-        // In the fixed version, memoryFootprint MUST be 0 because trim() was called on release.
-        // In the buggy version, these allocations are leaked into the pool, so memoryFootprint will be 3 * segmentSize.
+        assertEquals(0, allocator.totalBytesAllocated)
+        assertEquals(3 * segmentSize, allocator.availableBytes)
+
+        allocator.trim()
+
         assertEquals(0, allocator.memoryFootprint)
         assertEquals(0, allocator.availableBytes)
     }

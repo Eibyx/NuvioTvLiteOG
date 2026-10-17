@@ -585,6 +585,9 @@ fun EpisodesRow(
                 }
             } ?: false,
             onDismiss = { optionsEpisode = null },
+            onNavigateEpisode = { step ->
+                adjacentEpisode(dedupedEpisodes, selectedEpisode, step)?.let { optionsEpisode = it }
+            },
             isPlayEnabled = isSelectedPlayEnabled,
             onPlay = {
                 onEpisodeClick(selectedEpisode)

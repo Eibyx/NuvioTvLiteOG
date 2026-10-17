@@ -3,7 +3,6 @@ package com.nuvio.tv.core.image
 import android.util.Log
 import coil3.ImageLoader
 import coil3.annotation.ExperimentalCoilApi
-import coil3.memory.MemoryCache
 import coil3.network.CacheStrategy
 import coil3.network.NetworkRequest
 import coil3.network.NetworkResponse
@@ -14,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import com.nuvio.tv.core.util.lruCacheMap
+import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.util.concurrent.ConcurrentHashMap
@@ -21,11 +21,14 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Stale-while-revalidate [CacheStrategy]:
  * - Fresh cache -> use it.
- * - Stale cache -> serve immediately, revalidate in background.
+ * - Stale cache -> serve it immediately.
  * - No cache -> normal network fetch.
  *
- * On background 200 (new image), evicts memory cache and notifies
- * [ImageInvalidationBus] so visible composables reload in-place.
+ * Background revalidation runs only when the cached response has an ETag or
+ * Last-Modified. Without a validator a GET always returns 200 and the body
+ * would be discarded, then the UI would download the same image again.
+ * Revalidation uses its own dispatcher so it cannot take slots from visible loads.
+ * A 200 invalidates the on-screen image only when the validator actually changed.
  */
 @OptIn(ExperimentalCoilApi::class)
 class StaleWhileRevalidateCacheStrategy(
@@ -36,6 +39,7 @@ class StaleWhileRevalidateCacheStrategy(
     companion object {
         private const val TAG = "NuvioSWR"
         private const val REVALIDATION_COOLDOWN_MS = 10L * 60 * 1000 // 10 min
+        private const val REVALIDATION_MAX_REQUESTS = 8
         private val revalidatingUrls = ConcurrentHashMap.newKeySet<String>()
         // One entry per revalidated image for the life of the process, and browsing a catalog walks
         // thousands of posters. Bounded: dropping the oldest cooldown only allows one extra
@@ -45,6 +49,13 @@ class StaleWhileRevalidateCacheStrategy(
 
     private val revalidationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val delegate = CacheControlCacheStrategy()
+    private val revalidationDispatcher = Dispatcher().apply {
+        maxRequests = REVALIDATION_MAX_REQUESTS
+        maxRequestsPerHost = REVALIDATION_MAX_REQUESTS
+    }
+
+    @Volatile
+    private var quietClient: OkHttpClient? = null
 
     override suspend fun read(
         cacheResponse: NetworkResponse,
@@ -54,11 +65,17 @@ class StaleWhileRevalidateCacheStrategy(
         val delegateResult = delegate.read(cacheResponse, networkRequest, options)
         if (delegateResult.response != null) return delegateResult
 
-        val url = networkRequest.url
-        val lastRevalidated = revalidatedAt[url]
-        val now = System.currentTimeMillis()
-        if (lastRevalidated == null || (now - lastRevalidated) > REVALIDATION_COOLDOWN_MS) {
-            scheduleBackgroundRevalidation(url, cacheResponse)
+        if (cachedResponseCanRevalidate(
+                cacheResponse.headers["etag"],
+                cacheResponse.headers["last-modified"],
+            )
+        ) {
+            val url = networkRequest.url
+            val lastRevalidated = revalidatedAt[url]
+            val now = System.currentTimeMillis()
+            if (lastRevalidated == null || (now - lastRevalidated) > REVALIDATION_COOLDOWN_MS) {
+                scheduleBackgroundRevalidation(url, cacheResponse)
+            }
         }
         return CacheStrategy.ReadResult(cacheResponse)
     }
@@ -72,12 +89,21 @@ class StaleWhileRevalidateCacheStrategy(
         return delegate.write(cacheResponse, networkRequest, networkResponse, options)
     }
 
+    private fun quietRevalidationClient(): OkHttpClient {
+        quietClient?.let { return it }
+        return synchronized(this) {
+            quietClient ?: revalidationClient().newBuilder()
+                .dispatcher(revalidationDispatcher)
+                .build()
+                .also { quietClient = it }
+        }
+    }
+
     private fun scheduleBackgroundRevalidation(url: String, cachedResponse: NetworkResponse) {
         if (!revalidatingUrls.add(url)) return
 
         revalidationScope.launch {
             try {
-                val client = revalidationClient()
                 val requestBuilder = Request.Builder().url(url)
                 cachedResponse.headers["etag"]?.let {
                     requestBuilder.addHeader("If-None-Match", it)
@@ -86,24 +112,27 @@ class StaleWhileRevalidateCacheStrategy(
                     requestBuilder.addHeader("If-Modified-Since", it)
                 }
 
-                val request = requestBuilder.build()
-                // Without a validator the request is not conditional, so a 200 is the only answer
-                // it can give and says nothing about whether the bytes changed. Evicting the disk
-                // entry on that would re-download every image from such a host once per cooldown.
-                val conditional = request.header("If-None-Match") != null ||
-                    request.header("If-Modified-Since") != null
-
-                val response = client.newCall(request).execute()
+                val response = quietRevalidationClient().newCall(requestBuilder.build()).execute()
                 try {
-                    when (response.code) {
-                        304 -> { /* unchanged */ }
-                        in 200..299 -> {
-                            if (conditional) {
-                                evictFromDiskCache(url)
-                                ImageInvalidationBus.notifyInvalidated(url)
+                    when (
+                        classifyRevalidationResponse(
+                            cachedEtag = cachedResponse.headers["etag"],
+                            cachedLastModified = cachedResponse.headers["last-modified"],
+                            responseCode = response.code,
+                            responseEtag = response.header("ETag"),
+                            responseLastModified = response.header("Last-Modified"),
+                        )
+                    ) {
+                        StaleRevalidationResult.Changed -> {
+                            evictFromDiskCache(url)
+                            evictFromMemoryCache(url)
+                            ImageInvalidationBus.notifyInvalidated(url)
+                        }
+                        StaleRevalidationResult.Unchanged -> {
+                            if (response.code != 304 && response.code !in 200..299) {
+                                Log.w(TAG, "Revalidation ${response.code}: ${url.take(80)}")
                             }
                         }
-                        else -> Log.w(TAG, "Revalidation ${response.code}: ${url.take(80)}")
                     }
                 } finally {
                     response.close()
@@ -134,4 +163,48 @@ class StaleWhileRevalidateCacheStrategy(
         } catch (_: Exception) { }
     }
 
+}
+
+internal fun cachedResponseCanRevalidate(etag: String?, lastModified: String?): Boolean =
+    !etag.isNullOrBlank() || !lastModified.isNullOrBlank()
+
+internal enum class StaleRevalidationResult {
+    Unchanged,
+    Changed,
+}
+
+/**
+ * A 200 is not proof the image changed. Poster hosts often ignore conditional
+ * headers and send the same bytes again. Reload only when ETag or Last-Modified
+ * is present on both sides and differs.
+ */
+internal fun classifyRevalidationResponse(
+    cachedEtag: String?,
+    cachedLastModified: String?,
+    responseCode: Int,
+    responseEtag: String?,
+    responseLastModified: String?,
+): StaleRevalidationResult {
+    if (responseCode == 304 || responseCode !in 200..299) {
+        return StaleRevalidationResult.Unchanged
+    }
+    val cachedTag = cachedEtag?.takeIf { it.isNotBlank() }
+    val newTag = responseEtag?.takeIf { it.isNotBlank() }
+    if (cachedTag != null && newTag != null) {
+        return if (cachedTag == newTag) {
+            StaleRevalidationResult.Unchanged
+        } else {
+            StaleRevalidationResult.Changed
+        }
+    }
+    val cachedModified = cachedLastModified?.takeIf { it.isNotBlank() }
+    val newModified = responseLastModified?.takeIf { it.isNotBlank() }
+    if (cachedTag == null && cachedModified != null && newModified != null) {
+        return if (cachedModified == newModified) {
+            StaleRevalidationResult.Unchanged
+        } else {
+            StaleRevalidationResult.Changed
+        }
+    }
+    return StaleRevalidationResult.Unchanged
 }

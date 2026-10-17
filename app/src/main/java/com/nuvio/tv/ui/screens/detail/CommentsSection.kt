@@ -96,6 +96,7 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import com.nuvio.tv.ui.screens.ambient.AmbientDialogEffect
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalTvMaterial3Api::class)
 @Composable
@@ -778,6 +779,7 @@ fun CommentOverlay(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+        AmbientDialogEffect(onDismiss)
         Box(
             modifier = Modifier
                 .fillMaxSize()
