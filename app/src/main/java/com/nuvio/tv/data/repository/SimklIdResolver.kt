@@ -216,8 +216,9 @@ class SimklIdResolver @Inject constructor(
     private suspend fun httpGet(url: String): String? {
         return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val request = Request.Builder().url(url).get().build()
-            val response = okHttpClient.newCall(request).execute()
-            if (response.isSuccessful) response.body?.string() else null
+            okHttpClient.newCall(request).execute().use { response ->
+                if (response.isSuccessful) response.body?.string() else null
+            }
         }
     }
 

@@ -9,6 +9,9 @@
         android:name="android.permission.RECEIVE_BOOT_COMPLETED"
         tools:node="remove" />
 
+    <!-- Lets the in-app updater install its own updates without a confirmation screen on Android 12+. -->
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
+
     <application>
         <receiver
             android:name=".core.sync.androidtv.TvChannelBootReceiver"
@@ -17,5 +20,14 @@
         <service
             android:name=".core.sync.androidtv.TvChannelRefreshJobService"
             tools:node="remove" />
+
+        <service
+            android:name=".updater.UpdateJobService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <receiver
+            android:name=".updater.UpdateInstallResultReceiver"
+            android:exported="false" />
     </application>
 </manifest>
