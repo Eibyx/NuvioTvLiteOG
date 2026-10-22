@@ -30,7 +30,6 @@ Lite numbering restarted at 2.0.0 after 1.4.10; it is independent of upstream's 
 - [upstream] Translation updates for French, Spanish, Portuguese, Hebrew, Polish, Slovak, Hungarian and more. @SK-Gits @IberianSoldierPC @gu-css @haveAnIssue @skoruppa @blueocean2308 @Omavel
 
 ### Kept lean for Lite
-- libass stays off by default on Lite, since it adds a full-screen GL overlay to every playback; turn it on under subtitle settings.
 - Background update jobs are not persisted across reboots on Lite, which has no boot receiver, and reschedule on the next launch.
 - Updates are still checked against the installed app's signing certificate before any install, silent or not.
 
