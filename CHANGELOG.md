@@ -12,7 +12,7 @@ channel.
 
 Lite numbering restarted at 2.0.0 after 1.4.10; it is independent of upstream's version.
 
-## v2.4.0-lite — 2026-10-22
+## v2.3.1-lite — 2026-10-22
 
 **Background updates:** Lite downloads new releases in the background and can install them silently while the TV is idle on Android 12+.
 
@@ -30,6 +30,7 @@ Lite numbering restarted at 2.0.0 after 1.4.10; it is independent of upstream's 
 - [upstream] Translation updates for French, Spanish, Portuguese, Hebrew, Polish, Slovak, Hungarian and more. @SK-Gits @IberianSoldierPC @gu-css @haveAnIssue @skoruppa @blueocean2308 @Omavel
 
 ### Kept lean for Lite
+- The Sentry SDK and its native libraries are no longer packaged in Lite, which never started crash reporting anyway. @oxxamclaude-art
 - Background update jobs are not persisted across reboots on Lite, which has no boot receiver, and reschedule on the next launch.
 - Updates are still checked against the installed app's signing certificate before any install, silent or not.
 
