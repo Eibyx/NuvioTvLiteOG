@@ -12,6 +12,28 @@ channel.
 
 Lite numbering restarted at 2.0.0 after 1.4.10; it is independent of upstream's version.
 
+## v2.4.0-lite — 2026-10-22
+
+**Background updates:** Lite downloads new releases in the background and can install them silently while the TV is idle on Android 12+.
+
+### Synced with upstream NuvioTV (1.1.0-beta.8)
+- [upstream] Updates download in the background, install silently when idle on Android 12+, and compile at install time. @kernexshadow
+- [upstream] Player chapters show as marks on the progress bar with a chapters panel, read from Matroska files on ExoPlayer too. @kernexshadow
+- [upstream] libass moves to a faster atlas-based renderer with a render-scale setting and tunneled-playback support. @skoruppa
+- [upstream] The player shows badges for what is playing, with a choice of badge pack. @tapframe
+- [upstream] A separate subtitle style applies to HDR and Dolby Vision video, detected from the HEVC stream when needed. @kernexshadow
+- [upstream] The streams screen shows resume progress, plugin source names and per-stream audio delay. @WhiteGiso @skoruppa @qwertyuiop8899
+- [upstream] Switching or deleting a profile no longer leaves its screens, data or watched toggles behind. @deejay189393
+- [upstream] Media-server title lookups take one request per title, and MDBList lists load in full and start hidden. @ysosrs123
+- [upstream] Fixes for detail ratings, movie resume state, logo overlap, episode checkmarks and the continue-watching cache. @kernexshadow @oathzed @skoruppa
+- [upstream] Watch parties let phones on the same profile chat. @tapframe
+- [upstream] Translation updates for French, Spanish, Portuguese, Hebrew, Polish, Slovak, Hungarian and more. @SK-Gits @IberianSoldierPC @gu-css @haveAnIssue @skoruppa @blueocean2308 @Omavel
+
+### Kept lean for Lite
+- libass stays off by default on Lite, since it adds a full-screen GL overlay to every playback; turn it on under subtitle settings.
+- Background update jobs are not persisted across reboots on Lite, which has no boot receiver, and reschedule on the next launch.
+- Updates are still checked against the installed app's signing certificate before any install, silent or not.
+
 ## v2.3.0-lite — 2026-10-17
 
 **Jellyfin and Emby:** add your media servers under Settings to browse, play and sync watched state alongside your add-ons.
