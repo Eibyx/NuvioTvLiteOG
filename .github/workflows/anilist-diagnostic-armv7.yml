@@ -17,6 +17,10 @@ on:
         description: Publish the verified artifact of this earlier run instead of rebuilding
         type: string
         default: ''
+      standalone:
+        description: Build the standalone app (com.eibyx.nuviotv.anilist) that installs beside the original Lite
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -29,6 +33,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       CI_USE_DEBUG_SIGNING: 'true'
+      STANDALONE: ${{ github.event_name == 'workflow_dispatch' && inputs.standalone && 'true' || 'false' }}
       # AGP resolves its debug keystore from ANDROID_USER_HOME first; pin it to the key fingerprinted below.
       ANDROID_USER_HOME: /home/runner/.android
     steps:
@@ -81,14 +86,14 @@ jobs:
       - name: Lite release unit tests
         run: >-
           ./gradlew :app:testLiteReleaseUnitTest
-          -PanilistArmv7Only=true -PanilistDiagnostic=true
+          -PanilistArmv7Only=true -PanilistDiagnostic=true -PanilistStandalone=${{ env.STANDALONE }}
           -Pkotlin.compiler.execution.strategy=in-process --max-workers=2
           "-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8"
           --stacktrace
       - name: Build only Lite ARMv7
         run: >-
           ./gradlew :app:assembleLiteRelease
-          -PanilistArmv7Only=true -PanilistDiagnostic=true
+          -PanilistArmv7Only=true -PanilistDiagnostic=true -PanilistStandalone=${{ env.STANDALONE }}
           -Pkotlin.compiler.execution.strategy=in-process --max-workers=2
           "-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8"
           --stacktrace
@@ -101,9 +106,15 @@ jobs:
           mapfile -t apks < <(find app/build/outputs/apk/lite/release -maxdepth 1 -name '*.apk')
           test "${#apks[@]}" -eq 1
           mkdir -p delivery
-          apk=delivery/NuvioTV-Lite-2.3.2-anilist.1-experimental-debug-signed-armeabi-v7a.apk
+          extra=()
+          if [ "$STANDALONE" = true ]; then
+            apk=delivery/NuvioTV-AniList-2.3.2-anilist.1-standalone-debug-signed-armeabi-v7a.apk
+            extra+=(--standalone)
+          else
+            apk=delivery/NuvioTV-Lite-2.3.2-anilist.1-experimental-debug-signed-armeabi-v7a.apk
+          fi
           cp "${apks[0]}" "$apk"
-          python3 scripts/anilist/verify_apk.py "$apk" --diagnostic --expected-signer "$DIAGNOSTIC_SIGNER_SHA256" --reference-apk reference/app-lite-armeabi-v7a-release.apk --build-config app/build/generated/source/buildConfig/lite/release/com/nuvio/tv/BuildConfig.java --output delivery/apk-verification.json
+          python3 scripts/anilist/verify_apk.py "$apk" "${extra[@]}" --diagnostic --expected-signer "$DIAGNOSTIC_SIGNER_SHA256" --reference-apk reference/app-lite-armeabi-v7a-release.apk --build-config app/build/generated/source/buildConfig/lite/release/com/nuvio/tv/BuildConfig.java --output delivery/apk-verification.json
           sha256sum "$apk" > delivery/SHA256SUMS.txt
           cp diagnostic-config.json preservation.json delivery/
           cp validation/diagnostic-apk-instructions.md delivery/README.md
@@ -111,7 +122,7 @@ jobs:
       - name: Upload verified experimental APK and evidence (no release)
         uses: actions/upload-artifact@v4
         with:
-          name: NuvioTV-Lite-ARMv7-EXPERIMENTAL-DEBUG-SIGNED
+          name: ${{ env.STANDALONE == 'true' && 'NuvioTV-AniList-STANDALONE-ARMv7-DEBUG-SIGNED' || 'NuvioTV-Lite-ARMv7-EXPERIMENTAL-DEBUG-SIGNED' }}
           path: delivery/
           if-no-files-found: error
           retention-days: 30
@@ -142,11 +153,12 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       TAG: ${{ inputs.tag }}
       FROM_RUN_ID: ${{ inputs.from_run_id }}
+      STANDALONE: ${{ inputs.standalone && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: NuvioTV-Lite-ARMv7-EXPERIMENTAL-DEBUG-SIGNED
+          name: ${{ inputs.standalone && 'NuvioTV-AniList-STANDALONE-ARMv7-DEBUG-SIGNED' || 'NuvioTV-Lite-ARMv7-EXPERIMENTAL-DEBUG-SIGNED' }}
           path: delivery
           run-id: ${{ inputs.from_run_id || github.run_id }}
           github-token: ${{ github.token }}
@@ -160,14 +172,21 @@ jobs:
           import json
           from pathlib import Path
           r = json.loads(Path('delivery/apk-verification.json').read_text())
+          import os
           assert r['abi'] == 'armeabi-v7a' and r['native_payload_identical_to_original']
-          notes = Path('validation/anilist-release-notes.md').read_text()
+          standalone = os.environ['STANDALONE'] == 'true'
+          assert standalone == ('coexistence_with_original' in r), 'Artifact does not match the requested build kind'
+          notes = Path('validation/anilist-standalone-release-notes.md' if standalone else 'validation/anilist-release-notes.md').read_text()
           notes += '\n## Verificación de este APK\n\n'
           notes += f"- Archivo: `{r['apk']}`\n- SHA-256: `{r['sha256']}`\n"
           notes += f"- Package: `{r['package']}` · versionCode {r['version_code']} · versionName `{r['version_name']}`\n"
           notes += f"- ABI: `{r['abi']}` únicamente · bibliotecas nativas precompiladas (MPV, FFmpeg, ExoPlayer, libass) idénticas byte a byte a la release oficial v2.3.1-lite ARMv7; `libdovi_bridge.so` compilada desde las fuentes sin cambios\n"
           notes += f"- Firma: Android Debug (generada en el runner), certificado SHA-256 `{r['signer_sha256']}`\n"
           notes += f"- AniList: Client ID `{r['anilist_client_id']}`, redirect `{r['anilist_redirect_uri']}`\n"
+          if standalone:
+              c = r['coexistence_with_original']
+              notes += f"- Coexistencia con `{c['original_package']}` (APK oficial v2.3.1-lite): sin conflictos de package, authorities ({', '.join(c['standalone_authorities'])}) ni permisos personalizados; sin sharedUserId; sin actualizador integrado\n"
+              notes += f"- Nombre visible: `{c['launcher_label']}`\n"
           Path('delivery/RELEASE_NOTES.md').write_text(notes)
           PY
           # Tag the commit the APK was actually built from.
@@ -175,10 +194,17 @@ jobs:
           if [ -n "$FROM_RUN_ID" ]; then
             target="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$FROM_RUN_ID" --jq .head_sha)"
           fi
-          title="NuvioTV Lite + AniList — ${TAG} (experimental ARMv7, firma debug)"
+          if [ "$STANDALONE" = true ]; then
+            title="NuvioTV AniList — ${TAG} (app independiente, experimental ARMv7, firma debug)"
+          else
+            title="NuvioTV Lite + AniList — ${TAG} (experimental ARMv7, firma debug)"
+          fi
           # GITHUB_TOKEN cannot create a tag on a commit that changes workflow files, so a tag or
           # release created beforehand by the owner is filled in instead of created.
           if gh release view "$TAG" >/dev/null 2>&1; then
+            # Never mix builds: refuse a release that already holds a different APK.
+            other="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep '\.apk$' | grep -vxF "$(basename delivery/*.apk)" || true)"
+            test -z "$other" || { echo "Release $TAG already contains another APK: $other" >&2; exit 1; }
             gh release edit "$TAG" --prerelease --draft=false --title "$title" --notes-file delivery/RELEASE_NOTES.md
             gh release upload "$TAG" --clobber delivery/*.apk delivery/SHA256SUMS.txt
           elif gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then

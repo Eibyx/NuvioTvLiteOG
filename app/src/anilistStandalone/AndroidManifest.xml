@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Standalone AniList build (-PanilistStandalone=true). It installs beside the original Lite
+         app, so it ships the no-op updater stub: the real updater would download and install the
+         official com.nuvio.tv.lite APK, i.e. update the original app instead of this one. -->
+    <uses-permission
+        android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION"
+        tools:node="remove" />
+
+    <application>
+        <service
+            android:name=".updater.UpdateJobService"
+            tools:node="remove" />
+
+        <receiver
+            android:name=".updater.UpdateInstallResultReceiver"
+            tools:node="remove" />
+    </application>
+</manifest>

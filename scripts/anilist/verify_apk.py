@@ -12,6 +12,7 @@ import zipfile
 from pathlib import Path
 
 from apk_inspection import certificate_sha256, dex_strings, native_payload
+from verify_coexistence import STANDALONE_PACKAGE, check as check_coexistence
 from verify_release_config import MOBILE_CLIENT, properties, validate
 
 
@@ -26,7 +27,7 @@ def tool(name):
     return str(candidates[0]) if candidates else shutil.which(name) or name
 
 
-def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=None, reference=None):
+def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=None, reference=None, standalone=False):
     validate(values, require_anilist=not diagnostic)
     path = Path(apk)
     native = native_payload(path)
@@ -60,7 +61,8 @@ def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=No
     dn = re.search(r'certificate DN:\s*(.+)', signature).group(1)
     badging = subprocess.check_output([tool('aapt'), 'dump', 'badging', str(path)], text=True)
     package = re.search(r"package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging)
-    assert package and package[1] == 'com.nuvio.tv.lite', 'Unexpected Lite package ID'
+    expected_package = STANDALONE_PACKAGE if standalone else 'com.nuvio.tv.lite'
+    assert package and package[1] == expected_package, 'Unexpected package ID: ' + (package[1] if package else '?')
     assert int(package[2]) > 10023, 'versionCode must exceed original Lite'
     assert "native-code: 'armeabi-v7a'" in badging
     expected = expected_signer.replace(':', '').lower() if expected_signer else None
@@ -84,7 +86,8 @@ def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=No
         assert 'CN=Android Debug' in dn and 'O=Android' in dn, 'Diagnostic APK must use an Android debug certificate'
         assert expected, 'Supply the generated debug certificate fingerprint'
         assert native_match, 'A diagnostic APK requires the original native reference'
-        assert 'diagnostic-debug-signed' in package[3], 'Diagnostic version label missing'
+        label = 'standalone-debug-signed' if standalone else 'diagnostic-debug-signed'
+        assert label in package[3], 'Debug-signed version label missing'
         assert (values.get('ANILIST_CLIENT_ID'), values.get('ANILIST_REDIRECT_URI')) == MOBILE_CLIENT, 'Debug-signed delivery reuses only the NuvioMobileKai AniList client'
         assert build_config, 'BuildConfig evidence required for the AniList configuration'
         generated = Path(build_config).read_text()
@@ -114,8 +117,12 @@ if __name__ == '__main__':
     parser.add_argument('--diagnostic', action='store_true')
     parser.add_argument('--build-config')
     parser.add_argument('--reference-apk')
+    parser.add_argument('--standalone', action='store_true')
     args = parser.parse_args()
     result = inspect(args.apk, properties(args.properties), args.expected_signer, args.diagnostic,
-                     args.build_config, args.reference_apk)
+                     args.build_config, args.reference_apk, args.standalone)
+    if args.standalone:
+        assert args.reference_apk, 'Coexistence is checked against the original Lite APK'
+        result['coexistence_with_original'] = check_coexistence(tool('aapt'), args.apk, args.reference_apk)
     Path(args.output).write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps(result, indent=2))

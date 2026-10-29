@@ -111,6 +111,9 @@ fun truthy(value: String?): Boolean {
 
 val buildingAppBundle = gradle.startParameter.taskNames.any { it.contains("bundle", ignoreCase = true) }
 val useDebugReleaseSigning = env("CI_USE_DEBUG_SIGNING").equals("true", ignoreCase = true)
+// Experimental AniList build that installs beside the original Lite app (own package and label).
+val anilistStandalone = providers.gradleProperty("anilistStandalone").orNull == "true"
+val anilistStandaloneApplicationId = "com.eibyx.nuviotv.anilist"
 val useLocalFfmpegDecoder = truthy(
     providers.gradleProperty("useLocalFfmpegDecoder").orNull
         ?: env("USE_LOCAL_FFMPEG_DECODER")
@@ -240,7 +243,15 @@ android {
         // lite = playstore plugin stubs + the REAL in-app updater (so it gets OTA from
         // GitHub Releases), but NOT the playstore updater stub.
         getByName("lite") {
-            java.srcDirs("src/playstore/java", "src/updater/java", "src/sentrystub/java")
+            // The standalone AniList build must not install the official Lite APK over the original.
+            java.srcDirs("src/playstore/java", if (anilistStandalone) "src/updaterstub/java" else "src/updater/java", "src/sentrystub/java")
+        }
+        if (anilistStandalone) {
+            // Build-type sources outrank the lite flavor, so the label overrides every lite locale.
+            getByName("release") {
+                res.srcDirs("src/anilistStandalone/res")
+                manifest.srcFile("src/anilistStandalone/AndroidManifest.xml")
+            }
         }
         // The real in-app updater is shared by full + lite; playstore keeps the no-op stub
         // (Google Play forbids self-updating).
@@ -420,6 +431,12 @@ androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->
         val isPlaystore = variant.productFlavors.any { it.second == "playstore" }
         variant.applicationId.set(if (isPlaystore) "com.nuvio.appdebug" else "com.nuviodebug.com")
+    }
+    if (anilistStandalone) {
+        onVariants(selector().withBuildType("release").withFlavor("distribution" to "lite")) { variant ->
+            variant.applicationId.set(anilistStandaloneApplicationId)
+            variant.outputs.forEach { it.versionName.set("2.3.2-anilist.1-standalone-debug-signed") }
+        }
     }
     // Only full and lite ship the in-app updater.
     onVariants { variant ->
