@@ -11,9 +11,10 @@ def properties(path):
         if sep: values[k.strip()]=v.strip().replace('\\:',':').replace('\\=','=')
     return values
 
-def validate(values, online=False):
+def validate(values, online=False, require_anilist=True):
     from urllib.parse import urlparse
-    required=['NUVIO_SUPABASE_URL','NUVIO_SUPABASE_ANON_KEY','ANILIST_CLIENT_ID','ANILIST_REDIRECT_URI']
+    required=['NUVIO_SUPABASE_URL','NUVIO_SUPABASE_ANON_KEY']
+    if require_anilist: required += ['ANILIST_CLIENT_ID','ANILIST_REDIRECT_URI']
     missing=[k for k in required if not values.get(k)]
     if missing: raise ValueError('Missing upstream build properties: '+', '.join(missing))
     url=urlparse(values['NUVIO_SUPABASE_URL'])
@@ -24,9 +25,10 @@ def validate(values, online=False):
         assert len(pieces)==3,'Expected a public Supabase anon JWT or publishable key'
         claims=json.loads(base64.urlsafe_b64decode(pieces[1]+'='*(-len(pieces[1])%4)))
         assert claims.get('role')=='anon','Privileged/non-anon Supabase key rejected'
-    assert values['ANILIST_CLIENT_ID'].isdigit(),'Invalid AniList public client ID'
-    redirect=urlparse(values['ANILIST_REDIRECT_URI'])
-    assert redirect.scheme=='https' and redirect.hostname and not redirect.username and not redirect.fragment,'Invalid registered HTTPS OAuth callback'
+    if require_anilist:
+        assert values['ANILIST_CLIENT_ID'].isdigit(),'Invalid AniList public client ID'
+        redirect=urlparse(values['ANILIST_REDIRECT_URI'])
+        assert redirect.scheme=='https' and redirect.hostname and not redirect.username and not redirect.fragment,'Invalid registered HTTPS OAuth callback'
     result={'public_configuration_valid':True,'supabase_settings_http':None,'oauth_client_registration_verified':False}
     if online:
         req=urllib.request.Request(values['NUVIO_SUPABASE_URL'].rstrip('/')+'/auth/v1/settings',headers={'apikey':key})
@@ -39,6 +41,7 @@ def validate(values, online=False):
         except Exception:
             raise ValueError('Original Supabase public auth endpoint could not be verified') from None
         # Verify the static callback is actually hosted. This does not establish OAuth registration.
+        if not require_anilist: return result
         try:
             with urllib.request.urlopen(values['ANILIST_REDIRECT_URI'],timeout=20) as response:
                 content=response.read(128*1024)

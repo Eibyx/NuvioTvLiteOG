@@ -222,7 +222,9 @@ android {
             // Restarted at 2.0.0 after 1.4.10. Must only ever go up: installed builds offer an
             // update only when the release tag is a higher X.Y.Z than their own versionName.
             versionName = "2.3.2-anilist.1"
-            versionNameSuffix = "-lite"
+            versionNameSuffix = if (providers.gradleProperty("anilistDiagnostic").orNull == "true") {
+                "-lite-diagnostic-debug-signed"
+            } else "-lite"
             buildConfigField("boolean", "FEATURE_IN_APP_UPDATES_ENABLED", "true")
             buildConfigField("boolean", "FEATURE_EXTERNAL_TRAILERS_ENABLED", "false")
             buildConfigField("boolean", "FEATURE_EXTERNAL_PLAYBACK_KEEP_ALIVE_ENABLED", "false")
