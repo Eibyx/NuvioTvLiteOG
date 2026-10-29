@@ -1,0 +1,104 @@
+{
+  "source_commit": "450b83a83c83f9c2c255df096f0770149c4d5ddf",
+  "upstream_commit": "9bd27940ac8669b836807e6143feb0950fe0049d",
+  "lite_junit": {
+    "stage": "final-source",
+    "exit_code": 0,
+    "suites": 334,
+    "tests": 2347,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 3,
+    "anilist_tests": 69,
+    "passed": 2344,
+    "executed": 2344
+  },
+  "upstream_lite_junit": {
+    "stage": "original-baseline",
+    "exit_code": 0,
+    "suites": 324,
+    "tests": 2278,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 3,
+    "anilist_tests": 0,
+    "passed": 2275,
+    "executed": 2275
+  },
+  "original_cases_missing": 0,
+  "original_outcomes_changed": 0,
+  "python": {
+    "total": 21,
+    "passed": 21,
+    "failed": 0,
+    "skipped": 0
+  },
+  "callback_webcrypto": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "skipped": 0
+  },
+  "instrumented": {
+    "defined": 59,
+    "compiled": true,
+    "executed": 0,
+    "reason": "No connected device or emulator"
+  },
+  "github_verification": {
+    "run_url": "https://github.com/Eibyx/NuvioTvLiteOG/actions/runs/40905567712",
+    "conclusion": "success",
+    "artifact_id": 12910679450,
+    "junit_counts_match_local": true
+  },
+  "release_preparation": {
+    "run_url": "https://github.com/Eibyx/NuvioTvLiteOG/actions/runs/40907456462",
+    "status": "completed",
+    "conclusion": "failure",
+    "verify_job": "success",
+    "release_job": "failure",
+    "blocker": "Missing repository secret: LOCAL_PROPERTIES_BASE64",
+    "missing_repository_secrets": [
+      "LOCAL_PROPERTIES_BASE64",
+      "NUVIO_RELEASE_KEYSTORE_BASE64",
+      "NUVIO_RELEASE_KEY_ALIAS",
+      "NUVIO_RELEASE_KEY_PASSWORD",
+      "NUVIO_RELEASE_STORE_PASSWORD"
+    ]
+  },
+  "release_published": false,
+  "apk_generated": false,
+  "physical_tcl_tested": false,
+  "branch": "feature/anilist-tv-armv7",
+  "pr_url": "https://github.com/Eibyx/NuvioTvLiteOG/pull/1",
+  "planned_release_tag": "v2.3.2-anilist.1",
+  "release_url": null,
+  "apk_download_url": null,
+  "planned_apk_name": "NuvioTV-Lite-2.3.2-anilist.1-armeabi-v7a.apk",
+  "apk_sha256": null,
+  "mpv_exoplayer_native_sources_unchanged": true,
+  "nuvio_qr_supabase_sources_unchanged": true,
+  "public_supabase_primary_verified": true,
+  "public_supabase_fallback_http": 503,
+  "modified_original_files": [
+    "app/build.gradle.kts",
+    "app/src/androidTest/java/com/nuvio/tv/ui/screens/settings/TrackingSettingsOverviewTest.kt",
+    "app/src/main/AndroidManifest.xml",
+    "app/src/main/java/com/nuvio/tv/data/repository/WatchProgressRepositoryImpl.kt",
+    "app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsViewModel.kt",
+    "app/src/main/java/com/nuvio/tv/ui/screens/settings/TrackingSettingsScreen.kt"
+  ],
+  "connect_instructions": "Ajustes → Seguimiento → Cuentas → AniList → Conectar cuenta; escanear con teléfono en la misma LAN, autorizar en AniList y entregar autorización cifrada. Requiere registrar y configurar el cliente y callback HTTPS de TV.",
+  "update_installation_compatibility_verified": false,
+  "pending_configuration": [
+    "Registered authorized AniList TV OAuth client ID",
+    "Hosted HTTPS callback registered for that client",
+    "Original release keystore and signing credentials",
+    "Repository LOCAL_PROPERTIES_BASE64 with complete upstream configuration plus AniList TV properties"
+  ],
+  "pr_template_check": {
+    "status": "issue_linked",
+    "issue_url": "https://github.com/Eibyx/NuvioTvLiteOG/issues/2",
+    "reason": "Issues enabled by owner; previously authorized request recorded and linked to PR #1; original policy check preserved"
+  }
+}

@@ -70,6 +70,10 @@
             </intent-filter>
         </receiver>
 
+        <!-- One-shot AniList retry. Nuvio device login and its services remain upstream. -->
+        <service android:name=".data.anilist.AniListRetryService"
+            android:exported="false" android:permission="android.permission.BIND_JOB_SERVICE" />
+
         <service
             android:name=".core.sync.androidtv.TvChannelRefreshJobService"
             android:exported="false"

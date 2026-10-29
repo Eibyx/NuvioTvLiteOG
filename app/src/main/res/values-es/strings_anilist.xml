@@ -1,0 +1,16 @@
+<resources>
+    <string name="anilist_name">AniList</string>
+    <string name="anilist_description">Sincroniza tu lista de anime, episodios vistos y progreso de reproducción con AniList</string>
+    <string name="anilist_connected_as">Conectado como %1$s</string>
+    <string name="anilist_connected">Conectado</string>
+    <string name="anilist_disconnected">Desconectado</string>
+    <string name="anilist_connect">Conectar cuenta</string>
+    <string name="anilist_disconnect">Desconectar cuenta</string>
+    <string name="anilist_sync_now">Sincronizar ahora</string>
+    <string name="anilist_syncing">Sincronizando…</string>
+    <string name="anilist_last_sync">Última sincronización: %1$s</string>
+    <string name="anilist_pending">Envíos pendientes: %1$d</string>
+    <string name="anilist_missing_config">Esta compilación necesita un cliente OAuth AniList autorizado para TV y su página de retorno HTTPS registrada.</string>
+    <string name="anilist_qr_description">QR de autorización de AniList</string>
+    <string name="anilist_phone_instructions">Escanea con el teléfono, autoriza en AniList y entrega la autorización cifrada. Mantén el teléfono y el TV en la misma red local. El QR caduca en 10 minutos.</string>
+</resources>

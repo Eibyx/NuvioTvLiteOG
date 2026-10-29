@@ -64,6 +64,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -108,7 +109,8 @@ class MetaDetailsViewModel @Inject constructor(
     private val metaDetailsSessionState: MetaDetailsSessionState,
     private val watchedSeriesStateHolder: com.nuvio.tv.data.local.WatchedSeriesStateHolder,
     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
+    private val aniList: com.nuvio.tv.data.anilist.AniListRepository? = null
 ) : ViewModel() {
     private val itemId: String = savedStateHandle["itemId"] ?: ""
     private val isServerItem = ServerItemRef.isServerId(itemId)
@@ -553,6 +555,14 @@ class MetaDetailsViewModel @Inject constructor(
     }
 
     private fun observeWatchedEpisodes() {
+        if (aniList != null) viewModelScope.launch {
+            combine(
+                _uiState.map { it.meta }.distinctUntilChangedBy { it?.let { meta -> meta.id to meta.videos } },
+                aniList.state.map { it.connected }.distinctUntilChanged()
+            ) { meta, connected -> meta.takeIf { connected } }.collectLatest { meta ->
+                if (meta != null) aniList.refreshTitle(meta)
+            }
+        }
         if (itemType.lowercase() == "movie") return
         viewModelScope.launch {
             _effectiveContentId.flatMapLatest { cid ->
@@ -560,7 +570,8 @@ class MetaDetailsViewModel @Inject constructor(
                     watchedItemsPreferences.getWatchedEpisodesForContent(cid),
                     watchProgressRepository.getAllEpisodeProgress(cid),
                     _uiState.map { it.meta?.videos }.distinctUntilChanged(),
-                ) { localWatched, progressMap, videos ->
+                    aniList?.overlays ?: kotlinx.coroutines.flow.flowOf(emptyMap()),
+                ) { localWatched, progressMap, videos, aniListOverlays ->
                     val fromProgress = progressMap.filterValues { it.isCompleted() }.keys
                     val merged = (localWatched + fromProgress).toMutableSet()
                     // Remove optimistic unmarks — episodes the user just batch-unmarked
@@ -581,6 +592,8 @@ class MetaDetailsViewModel @Inject constructor(
                         )
                         if (isWatched) merged += key else merged -= key
                     }
+                    // Keep AniList's imported prefix separate from locally recorded history.
+                    merged += aniListOverlays[cid.lowercase()]?.watched.orEmpty()
                     merged as Set<Pair<Int, Int>>
                 }
             }
@@ -1980,6 +1993,14 @@ class MetaDetailsViewModel @Inject constructor(
                         .thenByDescending { it.episode ?: 0 }
                 )
                 .firstOrNull()
+        }
+        val aniListOverlay = aniList?.overlays?.value?.get(meta.id.lowercase())
+        val rewatchNext = aniListOverlay?.rewatchNext
+        if (rewatchNext != null && progressMap.values.none(::shouldResumeProgress)) {
+            episodePool.firstOrNull { it.season == rewatchNext.first && it.episode == rewatchNext.second }?.let { next ->
+                return NextToWatch(null, false, next.id, next.season, next.episode,
+                    localizedContext.getString(R.string.detail_btn_next_episode, next.season, next.episode))
+            }
         }
         val effectiveLatestProgress = latestSeriesProgress ?: run {
             if (watchedEpisodes.isEmpty()) null

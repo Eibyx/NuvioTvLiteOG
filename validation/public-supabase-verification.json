@@ -1,0 +1,15 @@
+{
+  "reference_release": "https://github.com/hackerslash/NuvioTV-Lite/releases/tag/v2.3.1-lite",
+  "reference_apk": "app-lite-armeabi-v7a-release.apk",
+  "reference_apk_sha256": "9ed2b43973714e8d98bb1aa076a306c2ec0faf85480df4124f0ab742271babe1",
+  "reference_certificate_sha256": "7ce8717c8a2610ddc6c3729abc42a8a6a5f571d3b44b39b2f78b7f8083da2662",
+  "public_supabase_url": "https://api.nuvio.tv",
+  "public_anon_role_verified": true,
+  "primary_auth_settings_http": 200,
+  "fallback_url_preserved_from_reference_apk": "https://api-two.nuvioapp.space",
+  "values_in_ignored_upstream_local_properties": true,
+  "new_apk_configuration_verified": false,
+  "installed_tcl_certificate_verified": false,
+  "fallback_auth_settings_http": 503,
+  "fallback_auth_settings_verified": false
+}

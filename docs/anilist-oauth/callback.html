@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<meta name="referrer" content="no-referrer"><meta http-equiv="Cache-Control" content="no-store">
+<title>Conectar AniList con NuvioTV Lite</title></head>
+<body><main><h1>Conectar AniList con NuvioTV Lite</h1><p id="status">Comprobando autorización…</p>
+<button id="send" hidden>Entregar autorización cifrada al TV</button></main>
+<script>
+// Host this exact file over HTTPS at ANILIST_REDIRECT_URI. No server-side code, storage,
+// analytics, dependencies or credentials. Tokens exist only in this page's memory.
+(async () => {
+  const status = document.getElementById('status'), button = document.getElementById('send');
+  const fragment = location.hash.slice(1);
+  history.replaceState(null, '', location.pathname + location.search);
+  const enc = new TextEncoder();
+  const decode = s => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+  const encode = b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  try {
+    if (!window.isSecureContext || location.protocol !== 'https:') throw Error('Se requiere HTTPS.');
+    const auth = new URLSearchParams(fragment), stateText = auth.get('state');
+    if (!stateText || stateText.length > 4096 || auth.has('error')) throw Error('Autorización cancelada o sin estado.');
+    const state = JSON.parse(new TextDecoder().decode(decode(stateText))), endpoint = new URL(state.endpoint);
+    const ip = endpoint.hostname.split('.').map(Number);
+    const privateIp = ip.length === 4 && ip.every(n => Number.isInteger(n) && n >= 0 && n <= 255) &&
+      (ip[0] === 10 || (ip[0] === 192 && ip[1] === 168) || (ip[0] === 172 && ip[1] >= 16 && ip[1] <= 31));
+    if (state.v !== 1 || !privateIp || endpoint.protocol !== 'http:' || endpoint.port !== '18767' ||
+      endpoint.username || endpoint.password || endpoint.search || endpoint.hash ||
+      !/^[A-Za-z0-9_-]{43}$/.test(state.nonce) || endpoint.pathname !== '/anilist/' + state.nonce ||
+      state.redirect !== location.href) throw Error('Destino o página de retorno no válido.');
+    const token = auth.get('access_token'), expiresIn = Number(auth.get('expires_in'));
+    if (!token || token.length > 16384 || !Number.isInteger(expiresIn) || expiresIn <= 0 || expiresIn > 31622400)
+      throw Error('AniList no devolvió una autorización válida.');
+    const key = await crypto.subtle.generateKey({name: 'AES-GCM', length: 256}, true, ['encrypt']);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const data = await crypto.subtle.encrypt({name: 'AES-GCM', iv, additionalData: enc.encode(stateText)}, key,
+      enc.encode(JSON.stringify({token, expiresIn, state: stateText})));
+    const pub = await crypto.subtle.importKey('spki', decode(state.key), {name: 'RSA-OAEP', hash: 'SHA-256'}, false, ['encrypt']);
+    const wrapped = await crypto.subtle.encrypt({name: 'RSA-OAEP'}, pub, await crypto.subtle.exportKey('raw', key));
+    // Top-level navigation works without exposing a token to mixed-content fetch, CORS or LAN HTTP.
+    // Browsers may ask permission to open the local network or continue an HTTP navigation.
+    const form = document.createElement('form'); form.method = 'POST'; form.action = endpoint.href;
+    for (const [name, value] of Object.entries({key: encode(wrapped), iv: encode(iv), data: encode(data)})) {
+      const input = document.createElement('input'); input.type = 'hidden'; input.name = name; input.value = value; form.append(input);
+    }
+    document.body.append(form);
+    status.textContent = 'Autorización cifrada. El teléfono y el TV deben estar en la misma red. Pulsa el botón y comprueba el estado en el TV.';
+    button.hidden = false; button.onclick = () => { button.disabled = true; form.submit(); };
+  } catch (e) { status.textContent = 'No se pudo conectar. Inicia la conexión de nuevo desde el TV. ' + e.message; }
+})();
+</script></body></html>

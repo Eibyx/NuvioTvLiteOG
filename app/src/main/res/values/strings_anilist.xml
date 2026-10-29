@@ -1,0 +1,16 @@
+<resources>
+    <string name="anilist_name">AniList</string>
+    <string name="anilist_description">Sync your anime list, watched episodes and playback progress with AniList</string>
+    <string name="anilist_connected_as">Connected as %1$s</string>
+    <string name="anilist_connected">Connected</string>
+    <string name="anilist_disconnected">Disconnected</string>
+    <string name="anilist_connect">Connect account</string>
+    <string name="anilist_disconnect">Disconnect account</string>
+    <string name="anilist_sync_now">Sync now</string>
+    <string name="anilist_syncing">Syncing…</string>
+    <string name="anilist_last_sync">Last sync: %1$s</string>
+    <string name="anilist_pending">Pending sends: %1$d</string>
+    <string name="anilist_missing_config">This build needs an authorized AniList TV OAuth client and its registered HTTPS callback.</string>
+    <string name="anilist_qr_description">AniList authorization QR</string>
+    <string name="anilist_phone_instructions">Scan with your phone, authorize on AniList and deliver the encrypted authorization. Keep the phone and TV on the same local network. The QR expires in 10 minutes.</string>
+</resources>
