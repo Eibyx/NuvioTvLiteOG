@@ -17,6 +17,8 @@ REFERENCE_SHA256 = '9ed2b43973714e8d98bb1aa076a306c2ec0faf85480df4124f0ab742271b
 REFERENCE_SIGNER = '7ce8717c8a2610ddc6c3729abc42a8a6a5f571d3b44b39b2f78b7f8083da2662'
 PRIMARY = 'https://api.nuvio.tv'
 FALLBACK = 'https://api-two.nuvioapp.space'
+DOVI_DEFAULTS = [('DOVI_NATIVE_ENABLED', 'true'), ('DOVI_EXTRACTOR_HOOK_READY', 'true'),
+                 ('DOVI_ENABLE_REAL_LINK', 'true'), ('DOVI_LIBDOVI_PREBUILT_ROOT', 'DV7/libdovi')]
 
 
 def public_anon_key(strings, now=None):
@@ -59,6 +61,10 @@ def prepare(apk, output, report_path, online=True):
     lines += ['NUVIO_SUPABASE_URL=' + PRIMARY, 'NUVIO_SUPABASE_ANON_KEY=' + anon,
               'NUVIO_SUPABASE_FALLBACK_URL=' + FALLBACK, 'ANILIST_CLIENT_ID=' + MOBILE_CLIENT[0],
               'ANILIST_REDIRECT_URI=' + MOBILE_CLIENT[1]]
+    # Official Lite ships libdovi_bridge.so; use the repository's documented DV7 defaults
+    # (local.example.properties) unless a supplied configuration already sets them.
+    present = {line.partition('=')[0].strip() for line in lines}
+    lines += [k + '=' + v for k, v in DOVI_DEFAULTS if k not in present]
     output.write_text('\n'.join(lines) + '\n')
     output.chmod(0o600)
     check = validate(properties(output), online=online)
