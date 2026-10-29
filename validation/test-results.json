@@ -97,7 +97,8 @@
     "Repository LOCAL_PROPERTIES_BASE64 with complete upstream configuration plus AniList TV properties"
   ],
   "pr_template_check": {
-    "status": "blocked",
-    "reason": "Issues disabled; enabling Issues returned HTTP 403; original policy check preserved"
+    "status": "issue_linked",
+    "issue_url": "https://github.com/Eibyx/NuvioTvLiteOG/issues/2",
+    "reason": "Issues enabled by owner; previously authorized request recorded and linked to PR #1; original policy check preserved"
   }
 }

@@ -96,7 +96,7 @@ Variables:
 - `ANILIST_TV_OAUTH_VERIFIED=true` únicamente después de registrar y probar el cliente/retorno en un teléfono y TV.
 - `NUVIO_EXPECTED_SIGNER_SHA256`, opcional para comparar con el certificado realmente instalado; sin ella las notas declaran que no se verificó la actualización.
 
-No es posible leer ni gestionar secretos/variables con el permiso efectivo actual: la API devuelve 403. La lectura de ramas, PR, runs, artefactos y releases sí fue comprobada. Se comprobaron push de la rama, creación/edición de PR, ejecución de Actions y descarga de sus artefactos mediante el conector GitHub. El check AniList pasa en Actions. Issues está deshabilitado y habilitarlo devolvió 403: el check original de plantilla del PR queda pendiente de una issue vinculada, sin modificarlo para ocultar el bloqueo.
+No es posible leer ni gestionar secretos/variables con el permiso efectivo actual: la API devuelve 403. La lectura de ramas, PR, runs, artefactos y releases sí fue comprobada. Se comprobaron push de la rama, creación/edición de PR, ejecución de Actions y descarga de sus artefactos mediante el conector GitHub. El check AniList pasa en Actions. El propietario habilitó Issues; la solicitud autorizada se registró en https://github.com/Eibyx/NuvioTvLiteOG/issues/2 y se vinculó al PR. El check original de plantilla permanece intacto.
 
 ## Límites de validación
 
@@ -116,9 +116,9 @@ No es posible leer ni gestionar secretos/variables con el permiso efectivo actua
 - Python: 21 aprobados; WebCrypto: 3 aprobados. Las 59 pruebas instrumentadas compilan, pero no se ejecutaron por ausencia de dispositivo/emulador.
 - Actions de verificación: https://github.com/Eibyx/NuvioTvLiteOG/actions/runs/40905567712 — aprobado; artefactos descargados mediante el conector y conteos JUnit comprobados.
 - Intento de preparación/publicación: https://github.com/Eibyx/NuvioTvLiteOG/actions/runs/40907456462 — pruebas aprobadas y publicación detenida porque el runner no recibió `LOCAL_PROPERTIES_BASE64` ni los cuatro secretos de firma. No se generó un APK nuevo ni una release.
-- PR en borrador: https://github.com/Eibyx/NuvioTvLiteOG/pull/1. La plantilla original exige una issue vinculada; Issues está deshabilitado y la API denegó habilitarlo (403). Ese check no se ha desactivado ni alterado.
+- PR en borrador: https://github.com/Eibyx/NuvioTvLiteOG/pull/1. La plantilla original exige una issue vinculada; tras habilitar Issues, se creó y vinculó la solicitud autorizada https://github.com/Eibyx/NuvioTvLiteOG/issues/2. Ese check no se ha desactivado ni alterado.
 - `local.properties` contiene únicamente la configuración pública Supabase recuperada del APK oficial; está ignorado por Git y no incluye OAuth AniList ni firma. Completarlo con el cliente/redirect autorizado y la configuración upstream restante, y proporcionarlo mediante `LOCAL_PROPERTIES_BASE64`.
 - No hay enlace de release, descarga ni SHA-256 de un APK final que se pueda entregar. El nombre previsto por el workflow es `NuvioTV-Lite-2.3.2-anilist.1-armeabi-v7a.apk` y el tag previsto es `v2.3.2-anilist.1`.
 - Compatibilidad de actualización no verificada: se conoce el certificado público del APK de referencia, pero no se dispone de la clave privada de firma ni del certificado realmente instalado en el TCL.
 
-Los commits finales de documentación/evidencia no alteran la aplicación validada. Se evita repetir CI en ellos mediante `[skip ci]`; los enlaces anteriores conservan los resultados del código real.
+Los cambios de documentación/evidencia no alteran la aplicación validada. Los enlaces anteriores conservan los resultados del código real; al vincular la issue se vuelve a activar el check original de plantilla.
