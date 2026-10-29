@@ -1,5 +1,8 @@
 name: Lite ARMv7 diagnostic APK (debug signed)
 on:
+  push:
+    branches: [feature/anilist-tv-armv7]
+    paths: ['.github/workflows/anilist-diagnostic-armv7.yml']
   workflow_dispatch:
 permissions:
   contents: read
