@@ -10,7 +10,8 @@
     <string name="anilist_syncing">Syncing…</string>
     <string name="anilist_last_sync">Last sync: %1$s</string>
     <string name="anilist_pending">Pending sends: %1$d</string>
-    <string name="anilist_missing_config">This build needs an authorized AniList TV OAuth client and its registered HTTPS callback.</string>
+    <string name="anilist_missing_config">This build needs an AniList OAuth client ID and its registered redirect.</string>
     <string name="anilist_qr_description">AniList authorization QR</string>
     <string name="anilist_phone_instructions">Scan with your phone, authorize on AniList and deliver the encrypted authorization. Keep the phone and TV on the same local network. The QR expires in 10 minutes.</string>
+    <string name="anilist_tv_browser_instructions">Connect opens AniList on this TV. Sign in with the remote and approve Nuvio; the TV receives the authorization directly. Press Back to cancel.</string>
 </resources>

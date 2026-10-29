@@ -12,7 +12,7 @@ import zipfile
 from pathlib import Path
 
 from apk_inspection import certificate_sha256, dex_strings, native_payload
-from verify_release_config import properties, validate
+from verify_release_config import MOBILE_CLIENT, properties, validate
 
 
 def tool(name):
@@ -31,12 +31,12 @@ def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=No
     assert any('ass' in n.lower() for n in native), 'Original subtitle native payload missing'
     constants = dex_strings(path)
     with zipfile.ZipFile(path) as archive:
-        assert not any(n.endswith(('.jks', '.keystore', '.pem', '.p12')) or Path(n).name in
+        assert not any(n.endswith(('.jks', '.keystore', '.p12')) or Path(n).name in
                        ('.env', 'local.properties', 'local.dev.properties') for n in archive.namelist()), 'Private configuration file packaged'
+        # Original Lite ships public CA bundles (assets/cacert.pem); only private keys are rejected.
+        assert not any(n.endswith('.pem') and b'PRIVATE KEY' in archive.read(n) for n in archive.namelist()), 'Private key packaged'
         dex = b''.join(archive.read(n) for n in archive.namelist() if re.fullmatch(r'classes\d*\.dex', n))
-    config_keys = ['NUVIO_SUPABASE_URL', 'NUVIO_SUPABASE_ANON_KEY']
-    if not diagnostic:
-        config_keys += ['ANILIST_CLIENT_ID', 'ANILIST_REDIRECT_URI']
+    config_keys = ['NUVIO_SUPABASE_URL', 'NUVIO_SUPABASE_ANON_KEY', 'ANILIST_CLIENT_ID', 'ANILIST_REDIRECT_URI']
     for key in config_keys:
         assert values[key] in constants, 'Expected public build constant absent from APK: ' + key
     if values.get('NUVIO_SUPABASE_FALLBACK_URL'):
@@ -77,12 +77,12 @@ def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=No
         assert expected, 'Supply the generated debug certificate fingerprint'
         assert native_match, 'A diagnostic APK requires the original native reference'
         assert 'diagnostic-debug-signed' in package[3], 'Diagnostic version label missing'
-        assert not values.get('ANILIST_CLIENT_ID') and not values.get('ANILIST_REDIRECT_URI'), 'Diagnostic delivery must not use unverified AniList credentials'
-        assert build_config, 'BuildConfig evidence required for missing AniList configuration'
+        assert (values.get('ANILIST_CLIENT_ID'), values.get('ANILIST_REDIRECT_URI')) == MOBILE_CLIENT, 'Debug-signed delivery reuses only the NuvioMobileKai AniList client'
+        assert build_config, 'BuildConfig evidence required for the AniList configuration'
         generated = Path(build_config).read_text()
-        for field in ['ANILIST_CLIENT_ID', 'ANILIST_REDIRECT_URI']:
+        for field, expected_value in zip(['ANILIST_CLIENT_ID', 'ANILIST_REDIRECT_URI'], MOBILE_CLIENT):
             match = re.search(r'\b' + field + r'\s*=\s*("(?:\\.|[^"\\])*")\s*;', generated)
-            assert match and json.loads(match.group(1)) == '', 'AniList client unexpectedly configured'
+            assert match and json.loads(match.group(1)) == expected_value, 'Unexpected AniList client in BuildConfig'
     return {'apk': path.name, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(), 'package': package[1],
             'version_code': int(package[2]), 'version_name': package[3], 'abi': 'armeabi-v7a',
             'signer_sha256': signer, 'signer_dn': dn, 'signing': 'android_debug' if diagnostic else 'configured',
@@ -91,7 +91,8 @@ def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=No
             'can_update_official_reference_certificate': signer == reference_signer if reference_signer else None,
             'native_libraries': native, 'native_payload_identical_to_original': native_match,
             'zip_integrity': True, 'public_config_embedded': True,
-            'anilist_oauth': 'not_configured' if diagnostic else 'configured_unverified',
+            'anilist_client_id': values['ANILIST_CLIENT_ID'], 'anilist_redirect_uri': values['ANILIST_REDIRECT_URI'],
+            'anilist_oauth': 'configured_unverified_on_tv',
             'anilist_connection_verified': False, 'physical_tcl_tested': False}
 
 

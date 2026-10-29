@@ -24,7 +24,9 @@ data class AniListTvState(
     val lastSyncAt: Long? = null,
     val pending: Int = 0,
     val error: String? = null,
-    val authorizationUrl: String? = null
+    val authorizationUrl: String? = null,
+    /** Set while the TV's own browser runs Mobile's OAuth request (app-scheme redirect). */
+    val webAuthorizationUrl: String? = null
 )
 
 @Singleton
@@ -155,10 +157,14 @@ class AniListRepository @Inject internal constructor(
             stopPairingLocked()
             val account = auth.scope(); pairingProfile = account
             auth.beginAuthorization(account)
-            pairing = AniListPhonePairing(AniListConfig.clientId, AniListConfig.redirectUri) { token, expires ->
-                scope.launch { finishAuthorization(account, token, expires) }
-            }.also { it.start() }
-            mutableState.update { it.copy(error = null, authorizationUrl = pairing!!.authorizeUrl) }
+            if (AniListConfig.usesPhonePairing) {
+                pairing = AniListPhonePairing(AniListConfig.clientId, AniListConfig.redirectUri) { token, expires ->
+                    scope.launch { finishAuthorization(account, token, expires) }
+                }.also { it.start() }
+                mutableState.update { it.copy(error = null, authorizationUrl = pairing!!.authorizeUrl) }
+            } else {
+                mutableState.update { it.copy(error = null, webAuthorizationUrl = AniListConfig.tvBrowserAuthorizeUrl()) }
+            }
             pairingExpiry = scope.launch {
                 delay(10 * 60_000L)
                 gate.withLock {
@@ -188,12 +194,35 @@ class AniListRepository @Inject internal constructor(
         } catch (e: CancellationException) { throw e } catch (e: Exception) { report(e) }
     }
 
+    /** Called by the TV browser for every navigation; true when it was the OAuth redirect. */
+    fun handleWebCallback(url: String): Boolean {
+        val callback = parseAniListCallback(url, AniListConfig.redirectUri) ?: return false
+        scope.launch {
+            initialized.await()
+            // Close the browser as soon as AniList answers; repeated callbacks are ignored.
+            val account = gate.withLock {
+                pairingProfile?.takeIf { mutableState.value.webAuthorizationUrl != null }
+                    ?.also { mutableState.update { it.copy(webAuthorizationUrl = null) } }
+            } ?: return@launch
+            when (callback) {
+                is AniListCallback.Token -> finishAuthorization(account, callback.token,
+                    System.currentTimeMillis() + (callback.expiresInSeconds ?: 31_536_000L) * 1000)
+                AniListCallback.Denied -> gate.withLock { stopPairingLocked() }
+                AniListCallback.Invalid -> gate.withLock {
+                    stopPairingLocked()
+                    mutableState.update { it.copy(error = "AniList no devolvió una autorización válida. Inténtalo de nuevo.") }
+                }
+            }
+        }
+        return true
+    }
+
     fun cancelConnection() { scope.launch { initialized.await(); gate.withLock { stopPairingLocked() } } }
     private fun stopPairingLocked() {
         pairingExpiry?.cancel(); pairingExpiry = null
         pairing?.stop(); pairing = null; pairingProfile = null
         if (::auth.isInitialized) auth.cancelAuthorization()
-        mutableState.update { it.copy(authorizationUrl = null) }
+        mutableState.update { it.copy(authorizationUrl = null, webAuthorizationUrl = null) }
     }
 
     fun disconnect() { scope.launch {

@@ -44,6 +44,8 @@ internal fun AniListAccountDialog(state: AniListTvState, onConnect: () -> Unit, 
                     Text(stringResource(R.string.anilist_phone_instructions), Modifier.weight(1f))
                 }
             }
+            if (!state.connected && state.configured && !com.nuvio.tv.data.anilist.AniListConfig.usesPhonePairing)
+                Text(stringResource(R.string.anilist_tv_browser_instructions), color = NuvioTheme.colors.TextSecondary)
             state.lastSyncAt?.let { Text(stringResource(R.string.anilist_last_sync,
                 DateFormat.getDateTimeInstance().format(Date(it)))) }
             if (state.pending > 0) Text(stringResource(R.string.anilist_pending, state.pending))
@@ -54,7 +56,7 @@ internal fun AniListAccountDialog(state: AniListTvState, onConnect: () -> Unit, 
                 if (state.connected) {
                     SettingsDialogActionButton(stringResource(R.string.anilist_sync_now), onSync)
                     SettingsDialogActionButton(stringResource(R.string.anilist_disconnect), onDisconnect)
-                } else if (state.configured && state.authorizationUrl == null) {
+                } else if (state.configured && state.authorizationUrl == null && state.webAuthorizationUrl == null) {
                     SettingsDialogActionButton(stringResource(R.string.anilist_connect), onConnect, primary = true)
                 }
         }

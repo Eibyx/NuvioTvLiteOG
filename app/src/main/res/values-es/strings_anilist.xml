@@ -10,7 +10,8 @@
     <string name="anilist_syncing">Sincronizando…</string>
     <string name="anilist_last_sync">Última sincronización: %1$s</string>
     <string name="anilist_pending">Envíos pendientes: %1$d</string>
-    <string name="anilist_missing_config">Esta compilación necesita un cliente OAuth AniList autorizado para TV y su página de retorno HTTPS registrada.</string>
+    <string name="anilist_missing_config">Esta compilación necesita un Client ID OAuth de AniList y su redirección registrada.</string>
     <string name="anilist_qr_description">QR de autorización de AniList</string>
     <string name="anilist_phone_instructions">Escanea con el teléfono, autoriza en AniList y entrega la autorización cifrada. Mantén el teléfono y el TV en la misma red local. El QR caduca en 10 minutos.</string>
+    <string name="anilist_tv_browser_instructions">Conectar abre AniList en este TV. Inicia sesión con el mando y autoriza a Nuvio; el TV recibe la autorización directamente. Pulsa Atrás para cancelar.</string>
 </resources>

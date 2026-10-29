@@ -12,5 +12,6 @@ class AniListSettingsViewModel @Inject constructor(private val repository: AniLi
     fun disconnect() = repository.disconnect()
     fun sync() = repository.syncNow()
     fun cancel() = repository.cancelConnection()
+    fun handleWebCallback(url: String) = repository.handleWebCallback(url)
     override fun onCleared() { repository.cancelConnection() }
 }

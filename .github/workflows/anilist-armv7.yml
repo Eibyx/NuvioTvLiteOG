@@ -1,7 +1,7 @@
 name: AniList Lite ARMv7 experimental
 on:
   push:
-    branches: [feature/anilist-tv-armv7]
+    branches: [feature/anilist-tv-armv7, claude/anilist-nuviotv-armv7-cuxyj3]
   workflow_dispatch:
     inputs:
       publish_release:

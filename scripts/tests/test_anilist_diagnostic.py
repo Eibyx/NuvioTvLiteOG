@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'anilist'))
 from prepare_diagnostic_config import public_anon_key
 from apk_inspection import certificate_sha256
-from verify_release_config import validate
+from verify_release_config import MOBILE_CLIENT, validate
 
 
 def token(claims):
@@ -23,6 +23,14 @@ class DiagnosticConfigurationTests(unittest.TestCase):
         self.assertTrue(validate(values, require_anilist=False)['public_configuration_valid'])
         with self.assertRaisesRegex(ValueError, 'ANILIST_CLIENT_ID'):
             validate(values)
+
+    def test_mobile_app_scheme_client_is_accepted_but_other_schemes_are_not(self):
+        values = {'NUVIO_SUPABASE_URL': 'https://example.supabase.co',
+                  'NUVIO_SUPABASE_ANON_KEY': token({'role': 'anon'}),
+                  'ANILIST_CLIENT_ID': MOBILE_CLIENT[0], 'ANILIST_REDIRECT_URI': MOBILE_CLIENT[1]}
+        self.assertTrue(validate(values)['public_configuration_valid'])
+        with self.assertRaisesRegex(AssertionError, 'callback'):
+            validate(dict(values, ANILIST_REDIRECT_URI='other://auth/anilist'))
 
     def test_diagnostic_mode_still_rejects_privileged_key(self):
         with self.assertRaisesRegex(AssertionError, 'Privileged'):

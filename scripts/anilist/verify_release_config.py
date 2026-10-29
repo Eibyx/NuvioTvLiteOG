@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Fail closed without printing configuration values, keys or credentials."""
 import argparse, base64, json, re, urllib.request
+
+# Public client registered for NuvioMobileKai (no secret); its only redirect is the app scheme.
+MOBILE_CLIENT=('53329','nuvio://auth/anilist')
 from pathlib import Path
 
 def properties(path):
@@ -28,7 +31,8 @@ def validate(values, online=False, require_anilist=True):
     if require_anilist:
         assert values['ANILIST_CLIENT_ID'].isdigit(),'Invalid AniList public client ID'
         redirect=urlparse(values['ANILIST_REDIRECT_URI'])
-        assert redirect.scheme=='https' and redirect.hostname and not redirect.username and not redirect.fragment,'Invalid registered HTTPS OAuth callback'
+        app_scheme=values['ANILIST_REDIRECT_URI']==MOBILE_CLIENT[1]
+        assert app_scheme or (redirect.scheme=='https' and redirect.hostname and not redirect.username and not redirect.fragment),'Invalid registered OAuth callback'
     result={'public_configuration_valid':True,'supabase_settings_http':None,'oauth_client_registration_verified':False}
     if online:
         req=urllib.request.Request(values['NUVIO_SUPABASE_URL'].rstrip('/')+'/auth/v1/settings',headers={'apikey':key})
@@ -41,7 +45,7 @@ def validate(values, online=False, require_anilist=True):
         except Exception:
             raise ValueError('Original Supabase public auth endpoint could not be verified') from None
         # Verify the static callback is actually hosted. This does not establish OAuth registration.
-        if not require_anilist: return result
+        if not require_anilist or values['ANILIST_REDIRECT_URI']==MOBILE_CLIENT[1]: return result
         try:
             with urllib.request.urlopen(values['ANILIST_REDIRECT_URI'],timeout=20) as response:
                 content=response.read(128*1024)

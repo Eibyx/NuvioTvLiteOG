@@ -4,6 +4,15 @@ on:
     branches: [feature/anilist-tv-armv7]
     paths: ['.github/workflows/anilist-diagnostic-armv7.yml']
   workflow_dispatch:
+    inputs:
+      publish_prerelease:
+        description: Publish the verified debug-signed APK as an experimental pre-release
+        type: boolean
+        default: false
+      tag:
+        description: Pre-release tag
+        type: string
+        default: v0.1.0-anilist
 permissions:
   contents: read
 concurrency:
@@ -75,7 +84,7 @@ jobs:
           mapfile -t apks < <(find app/build/outputs/apk/lite/release -maxdepth 1 -name '*.apk')
           test "${#apks[@]}" -eq 1
           mkdir -p delivery
-          apk=delivery/NuvioTV-Lite-2.3.2-anilist.1-EXPERIMENTAL-DEBUG-SIGNED-armeabi-v7a.apk
+          apk=delivery/NuvioTV-Lite-2.3.2-anilist.1-experimental-debug-signed-armeabi-v7a.apk
           cp "${apks[0]}" "$apk"
           python3 scripts/anilist/verify_apk.py "$apk" --diagnostic --expected-signer "$DIAGNOSTIC_SIGNER_SHA256" --reference-apk reference/app-lite-armeabi-v7a-release.apk --build-config app/build/generated/source/buildConfig/lite/release/com/nuvio/tv/BuildConfig.java --output delivery/apk-verification.json
           sha256sum "$apk" > delivery/SHA256SUMS.txt
@@ -103,3 +112,40 @@ jobs:
       - name: Remove local configuration and debug key
         if: always()
         run: rm -f local.properties "$HOME/.android/debug.keystore"
+  prerelease:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_prerelease
+    needs: diagnostic
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: NuvioTV-Lite-ARMv7-EXPERIMENTAL-DEBUG-SIGNED
+          path: delivery
+      - name: Publish experimental pre-release with only the ARMv7 APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd delivery && sha256sum -c SHA256SUMS.txt)
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r = json.loads(Path('delivery/apk-verification.json').read_text())
+          assert r['abi'] == 'armeabi-v7a' and r['native_payload_identical_to_original']
+          notes = Path('validation/anilist-release-notes.md').read_text()
+          notes += '\n## Verificación de este APK\n\n'
+          notes += f"- Archivo: `{r['apk']}`\n- SHA-256: `{r['sha256']}`\n"
+          notes += f"- Package: `{r['package']}` · versionCode {r['version_code']} · versionName `{r['version_name']}`\n"
+          notes += f"- ABI: `{r['abi']}` únicamente · bibliotecas nativas idénticas byte a byte a la release oficial v2.3.1-lite ARMv7\n"
+          notes += f"- Firma: Android Debug (generada en el runner), certificado SHA-256 `{r['signer_sha256']}`\n"
+          notes += f"- AniList: Client ID `{r['anilist_client_id']}`, redirect `{r['anilist_redirect_uri']}`\n"
+          Path('delivery/RELEASE_NOTES.md').write_text(notes)
+          PY
+          gh release create "$TAG" --target "$GITHUB_SHA" --prerelease \
+            --title "NuvioTV Lite + AniList — ${TAG} (experimental ARMv7, firma debug)" \
+            --notes-file delivery/RELEASE_NOTES.md delivery/*.apk delivery/SHA256SUMS.txt

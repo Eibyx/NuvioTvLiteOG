@@ -11,7 +11,7 @@ from pathlib import Path
 
 from apk_inspection import certificate_sha256, dex_strings
 from verify_apk import tool
-from verify_release_config import properties, validate
+from verify_release_config import MOBILE_CLIENT, properties, validate
 
 REFERENCE_SHA256 = '9ed2b43973714e8d98bb1aa076a306c2ec0faf85480df4124f0ab742271babe1'
 REFERENCE_SIGNER = '7ce8717c8a2610ddc6c3729abc42a8a6a5f571d3b44b39b2f78b7f8083da2662'
@@ -57,17 +57,19 @@ def prepare(apk, output, report_path, online=True):
     lines = [line for line in lines if line.partition('=')[0].strip() not in replaced
              and not line.lstrip().startswith('NUVIO_RELEASE_')]
     lines += ['NUVIO_SUPABASE_URL=' + PRIMARY, 'NUVIO_SUPABASE_ANON_KEY=' + anon,
-              'NUVIO_SUPABASE_FALLBACK_URL=' + FALLBACK, 'ANILIST_CLIENT_ID=', 'ANILIST_REDIRECT_URI=']
+              'NUVIO_SUPABASE_FALLBACK_URL=' + FALLBACK, 'ANILIST_CLIENT_ID=' + MOBILE_CLIENT[0],
+              'ANILIST_REDIRECT_URI=' + MOBILE_CLIENT[1]]
     output.write_text('\n'.join(lines) + '\n')
     output.chmod(0o600)
-    check = validate(properties(output), online=online, require_anilist=False)
+    check = validate(properties(output), online=online)
     report = {'reference_release': 'v2.3.1-lite', 'reference_apk_sha256': REFERENCE_SHA256,
               'reference_signer_sha256': signer, 'supabase_public_role': 'anon',
               'supabase_primary': PRIMARY, 'supabase_fallback_preserved': FALLBACK,
               'supabase_settings_http': check['supabase_settings_http'],
               'configuration_mechanism': 'upstream local.properties',
-              'anilist_oauth': 'not_configured',
-              'anilist_warning': 'AniList cannot connect: authorized TV Client ID and registered HTTPS callback are missing.'}
+              'anilist_client_id': MOBILE_CLIENT[0], 'anilist_redirect_uri': MOBILE_CLIENT[1],
+              'anilist_oauth': 'NuvioMobileKai public client; TV browser intercepts the app-scheme redirect',
+              'anilist_warning': 'OAuth on the TV is not physically verified by CI.'}
     Path(report_path).write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(report, indent=2))
 

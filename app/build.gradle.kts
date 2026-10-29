@@ -147,9 +147,9 @@ android {
         buildConfigField("String", "TRAKT_CLIENT_SECRET", "\"${localProperties.getProperty("TRAKT_CLIENT_SECRET", "")}\"")
         buildConfigField("String", "TRAKT_API_URL", "\"${localProperties.getProperty("TRAKT_API_URL", "https://api.trakt.tv/")}\"")
         buildConfigField("String", "TRAKT_REDIRECT_URI", "\"${localProperties.getProperty("TRAKT_REDIRECT_URI", "urn:ietf:wg:oauth:2.0:oob")}\"")
-        // Public OAuth client only; the registered HTTPS callback is a static phone page.
-        buildConfigField("String", "ANILIST_CLIENT_ID", buildConfigString(resolveProperty(devProperties, localProperties, "ANILIST_CLIENT_ID")))
-        buildConfigField("String", "ANILIST_REDIRECT_URI", buildConfigString(resolveProperty(devProperties, localProperties, "ANILIST_REDIRECT_URI")))
+        // Public OAuth client only. Defaults to NuvioMobileKai's client and its app-scheme redirect.
+        buildConfigField("String", "ANILIST_CLIENT_ID", buildConfigString(resolveProperty(devProperties, localProperties, "ANILIST_CLIENT_ID", "53329")))
+        buildConfigField("String", "ANILIST_REDIRECT_URI", buildConfigString(resolveProperty(devProperties, localProperties, "ANILIST_REDIRECT_URI", "nuvio://auth/anilist")))
         buildConfigField("String", "SIMKL_CLIENT_ID", buildConfigString(resolveProperty(devProperties, localProperties, "SIMKL_CLIENT_ID")))
         buildConfigField("String", "SIMKL_APP_NAME", buildConfigString(resolveProperty(devProperties, localProperties, "SIMKL_APP_NAME", "nuvio")))
         buildConfigField("String", "MDBLIST_CLIENT_ID", buildConfigString(resolveProperty(devProperties, localProperties, "MDBLIST_CLIENT_ID")))

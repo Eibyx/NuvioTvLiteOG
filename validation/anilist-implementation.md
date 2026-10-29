@@ -59,9 +59,13 @@ No se modifican MPV, ExoPlayer, Media3, sus bibliotecas nativas, aceleración, b
 6. El envío nace del evento original de completado. Se persiste antes de la operación remota, se consulta la entrada fresca y solo se escribe si la regla Mobile devuelve un aumento. No se guarda un COMPLETED de nuevo, ni se reduce progreso, ni se genera REPEATING.
 7. Los casos sin correspondencia se muestran como fallos de enlace y no escriben remoto. No se incorpora una UI de enlace manual o un fallback por títulos/fechas para enviar.
 
-## OAuth TV independiente
+## OAuth: cliente de NuvioMobileKai (actualización)
 
-Configurar un cliente OAuth AniList autorizado para esta aplicación. No se reutiliza el Client ID móvil 53329 ni se incluye un Client Secret.
+La entrega experimental reutiliza el cliente público de Mobile (`53329`, redirect `nuvio://auth/anilist`), ahora valor por defecto de `ANILIST_CLIENT_ID`/`ANILIST_REDIRECT_URI`. AniList solo admite una redirección por cliente, así que con ese cliente el TV abre la autorización oficial en un WebView (`AniListWebAuthDialog`) e intercepta el esquema de app con las mismas reglas de `handleAuthCallback` de Mobile (`parseAniListCallback`). El flujo QR/HTTPS descrito a continuación sigue disponible si se configura un cliente propio con redirect HTTPS.
+
+## OAuth TV independiente (cliente propio opcional)
+
+Opcional: configurar un cliente OAuth AniList propio con redirect HTTPS. No se incluye un Client Secret.
 
 - Hospedar `docs/anilist-oauth/callback.html` sobre HTTPS, sin scripts de terceros, analíticas ni backend. Registrar su URL exacta como redirect del cliente AniList.
 - Proporcionar `ANILIST_CLIENT_ID` y `ANILIST_REDIRECT_URI` mediante `local.properties` (el mecanismo de compilación ya existente).

@@ -249,6 +249,10 @@ fun TrackingSettingsContent(
         onSync = aniListViewModel::sync,
         onDismiss = { showAniList = false; aniListViewModel.cancel() }
     )
+    aniListState.webAuthorizationUrl?.takeIf { showAniList }?.let { url ->
+        AniListWebAuthDialog(url = url, onCallback = aniListViewModel::handleWebCallback,
+            onDismiss = aniListViewModel::cancel)
+    }
 
     when (activeProvider) {
         TrackingProviderId.TRAKT -> {
