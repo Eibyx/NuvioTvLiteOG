@@ -75,6 +75,21 @@ fun TrackingSettingsContent(
     val mdbListState by mdbListViewModel.uiState.collectAsStateWithLifecycle()
     val mdbListLibraryLists by mdbListViewModel.libraryLists.collectAsStateWithLifecycle()
     val trackingState by trackingViewModel.uiState.collectAsStateWithLifecycle()
+    val aniListViewModel: AniListSettingsViewModel = hiltViewModel()
+    val aniListState by aniListViewModel.state.collectAsStateWithLifecycle()
+    val aniListFocusRequester = remember { FocusRequester() }
+    var showAniList by remember { mutableStateOf(false) }
+    var restoreAniListFocus by remember { mutableStateOf(false) }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { aniListViewModel.cancel() }
+    }
+    LaunchedEffect(showAniList, restoreAniListFocus) {
+        if (!showAniList && restoreAniListFocus) {
+            delay(120L)
+            runCatching { aniListFocusRequester.requestFocus() }
+            restoreAniListFocus = false
+        }
+    }
     val ownTraktFocusRequester = remember { FocusRequester() }
     val traktFocusRequester = initialFocusRequester ?: ownTraktFocusRequester
     val simklFocusRequester = remember { FocusRequester() }
@@ -95,7 +110,7 @@ fun TrackingSettingsContent(
     var showAnimeIdDialog by remember { mutableStateOf(false) }
     var showMdbListLibraryListsDialog by remember { mutableStateOf(false) }
 
-    val hasOverlay = activeProvider != null ||
+    val hasOverlay = showAniList || activeProvider != null ||
         disconnectProvider != null ||
         showLibrarySourceDialog ||
         showWatchProgressDialog ||
@@ -197,6 +212,9 @@ fun TrackingSettingsContent(
         onTraktClick = { openProvider(TrackingProviderId.TRAKT) },
         onSimklClick = { openProvider(TrackingProviderId.SIMKL) },
         onMdbListClick = { openProvider(TrackingProviderId.MDBLIST) },
+        aniListState = aniListState,
+        aniListFocusRequester = aniListFocusRequester,
+        onAniListClick = { showAniList = true; restoreAniListFocus = true },
         onLibrarySourceClick = {
             restoreFocusTarget = TrackingFocusTarget.LIBRARY
             showLibrarySourceDialog = true
@@ -222,6 +240,14 @@ fun TrackingSettingsContent(
             mdbListViewModel.onLibraryListsOpened()
             showMdbListLibraryListsDialog = true
         }
+    )
+
+    if (showAniList) AniListAccountDialog(
+        state = aniListState,
+        onConnect = aniListViewModel::connect,
+        onDisconnect = aniListViewModel::disconnect,
+        onSync = aniListViewModel::sync,
+        onDismiss = { showAniList = false; aniListViewModel.cancel() }
     )
 
     when (activeProvider) {
@@ -491,7 +517,10 @@ internal fun TrackingSettingsOverview(
     onMoreLikeThisClick: () -> Unit,
     onAnimeIdClick: () -> Unit,
     mdbListLibraryLists: MdbListLibraryListsUiState = MdbListLibraryListsUiState(),
-    onMdbListLibraryListsClick: () -> Unit = {}
+    onMdbListLibraryListsClick: () -> Unit = {},
+    aniListState: com.nuvio.tv.data.anilist.AniListTvState = com.nuvio.tv.data.anilist.AniListTvState(),
+    aniListFocusRequester: FocusRequester = remember { FocusRequester() },
+    onAniListClick: () -> Unit = {}
 ) {
     val listState = rememberLazyListState()
     val traktPresentation = traktConnectionPresentation(traktState)
@@ -557,6 +586,15 @@ internal fun TrackingSettingsOverview(
                             modifier = Modifier
                                 .focusRequester(mdbListFocusRequester)
                                 .testTag(TrackingSettingsTestTags.MDBLIST_PROVIDER)
+                        )
+                        SettingsActionRow(
+                            title = stringResource(R.string.anilist_name),
+                            subtitle = stringResource(R.string.anilist_description),
+                            value = stringResource(if (aniListState.connected) R.string.anilist_connected else R.string.anilist_disconnected),
+                            leadingRawIconRes = R.raw.anilist_logo,
+                            leadingArtworkSize = 40.dp,
+                            onClick = onAniListClick,
+                            modifier = Modifier.focusRequester(aniListFocusRequester).testTag("tracking_anilist_provider")
                         )
                     }
                 }

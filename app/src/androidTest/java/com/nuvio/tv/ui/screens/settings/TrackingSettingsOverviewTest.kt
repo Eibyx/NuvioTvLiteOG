@@ -45,7 +45,7 @@ class TrackingSettingsOverviewTest {
         composeRule.onNodeWithTag(TrackingSettingsTestTags.MDBLIST_PROVIDER).assertIsDisplayed()
         composeRule.onAllNodesWithText(
             context.getString(R.string.tracking_status_disconnected)
-        ).assertCountEquals(3)
+        ).assertCountEquals(4)
 
         val traktTop = composeRule
             .onNodeWithTag(TrackingSettingsTestTags.TRAKT_PROVIDER)
@@ -62,6 +62,8 @@ class TrackingSettingsOverviewTest {
             .fetchSemanticsNode().boundsInRoot.top
         assertTrue(traktTop < simklTop)
         assertTrue(simklTop < mdblistTop)
+        val aniListTop = composeRule.onNodeWithTag("tracking_anilist_provider").fetchSemanticsNode().boundsInRoot.top
+        assertTrue(mdblistTop < aniListTop)
     }
 
     @Test
@@ -163,7 +165,7 @@ class TrackingSettingsOverviewTest {
     }
 
     @Test
-    fun remoteFocusMovesFromTraktThroughSimklToMdbList() {
+    fun remoteFocusMovesFromTraktThroughSimklAndMdbListToAniList() {
         lateinit var traktFocusRequester: FocusRequester
         composeRule.setContent {
             NuvioTheme {
@@ -200,7 +202,9 @@ class TrackingSettingsOverviewTest {
             .assertIsFocused().performKeyInput { pressKey(Key.DirectionDown) }
         composeRule.onNodeWithTag(TrackingSettingsTestTags.SIMKL_PROVIDER)
             .assertIsFocused().performKeyInput { pressKey(Key.DirectionDown) }
-        composeRule.onNodeWithTag(TrackingSettingsTestTags.MDBLIST_PROVIDER).assertIsFocused()
+        composeRule.onNodeWithTag(TrackingSettingsTestTags.MDBLIST_PROVIDER)
+            .assertIsFocused().performKeyInput { pressKey(Key.DirectionDown) }
+        composeRule.onNodeWithTag("tracking_anilist_provider").assertIsFocused()
     }
 
     @Test

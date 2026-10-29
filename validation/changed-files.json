@@ -1,0 +1,222 @@
+{
+  "upstream_commit": "9bd27940ac8669b836807e6143feb0950fe0049d",
+  "source_mobile_commit": "62b4121af5e09977d87b445faa1cb91b268c6c12",
+  "files": [
+    {
+      "status": "A",
+      "path": ".github/workflows/anilist-armv7.yml"
+    },
+    {
+      "status": "M",
+      "path": "app/build.gradle.kts"
+    },
+    {
+      "status": "M",
+      "path": "app/src/androidTest/java/com/nuvio/tv/ui/screens/settings/TrackingSettingsOverviewTest.kt"
+    },
+    {
+      "status": "M",
+      "path": "app/src/main/AndroidManifest.xml"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AndroidAniListAuthPersistence.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AndroidAniListStorage.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListApiClient.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListAuthStore.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListConfig.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListIdResolver.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListModels.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListNetwork.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListPairingCrypto.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListPhonePairing.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListProfileCleaner.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListProgressSender.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListQueueStorage.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListRepository.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListRetryScheduler.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListSeasonMapping.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListSendQueue.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListTvProjection.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/data/anilist/AniListWatchedImport.kt"
+    },
+    {
+      "status": "M",
+      "path": "app/src/main/java/com/nuvio/tv/data/repository/WatchProgressRepositoryImpl.kt"
+    },
+    {
+      "status": "M",
+      "path": "app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsViewModel.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/ui/screens/settings/AniListAccountDialog.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/java/com/nuvio/tv/ui/screens/settings/AniListSettingsViewModel.kt"
+    },
+    {
+      "status": "M",
+      "path": "app/src/main/java/com/nuvio/tv/ui/screens/settings/TrackingSettingsScreen.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/res/raw/anilist_logo.svg"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/res/values-es/strings_anilist.xml"
+    },
+    {
+      "status": "A",
+      "path": "app/src/main/res/values/strings_anilist.xml"
+    },
+    {
+      "status": "A",
+      "path": "app/src/test/java/com/nuvio/tv/data/anilist/AniListAuthStoreTest.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/test/java/com/nuvio/tv/data/anilist/AniListIdResolverTvTest.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/test/java/com/nuvio/tv/data/anilist/AniListMushokuTenseiSendTest.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/test/java/com/nuvio/tv/data/anilist/AniListPairingCryptoTest.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/test/java/com/nuvio/tv/data/anilist/AniListSeasonMappingTest.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/test/java/com/nuvio/tv/data/anilist/AniListSendQueueTest.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/test/java/com/nuvio/tv/data/anilist/AniListSendQueueTvTest.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/test/java/com/nuvio/tv/data/anilist/AniListTransportTest.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/test/java/com/nuvio/tv/data/anilist/AniListTvProjectionTest.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/test/java/com/nuvio/tv/data/anilist/AniListWatchedImportTest.kt"
+    },
+    {
+      "status": "A",
+      "path": "app/src/test/java/com/nuvio/tv/data/anilist/MobileTestAssertions.kt"
+    },
+    {
+      "status": "A",
+      "path": "docs/anilist-oauth/callback.html"
+    },
+    {
+      "status": "A",
+      "path": "scripts/anilist/test_callback.mjs"
+    },
+    {
+      "status": "A",
+      "path": "scripts/anilist/verify_apk.py"
+    },
+    {
+      "status": "A",
+      "path": "scripts/anilist/verify_preservation.py"
+    },
+    {
+      "status": "A",
+      "path": "scripts/anilist/verify_release_config.py"
+    },
+    {
+      "status": "A",
+      "path": "scripts/tests/test_anilist_preservation.py"
+    },
+    {
+      "status": "A",
+      "path": "validation/anilist-implementation.md"
+    },
+    {
+      "status": "A",
+      "path": "validation/anilist-release-notes.md"
+    },
+    {
+      "status": "A",
+      "path": "validation/changed-files.json"
+    },
+    {
+      "status": "A",
+      "path": "validation/native-armv7-inventory.json"
+    },
+    {
+      "status": "A",
+      "path": "validation/test-coverage.md"
+    },
+    {
+      "status": "A",
+      "path": "validation/upstream-preservation.json"
+    }
+  ]
+}

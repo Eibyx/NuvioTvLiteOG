@@ -147,6 +147,9 @@ android {
         buildConfigField("String", "TRAKT_CLIENT_SECRET", "\"${localProperties.getProperty("TRAKT_CLIENT_SECRET", "")}\"")
         buildConfigField("String", "TRAKT_API_URL", "\"${localProperties.getProperty("TRAKT_API_URL", "https://api.trakt.tv/")}\"")
         buildConfigField("String", "TRAKT_REDIRECT_URI", "\"${localProperties.getProperty("TRAKT_REDIRECT_URI", "urn:ietf:wg:oauth:2.0:oob")}\"")
+        // Public OAuth client only; the registered HTTPS callback is a static phone page.
+        buildConfigField("String", "ANILIST_CLIENT_ID", buildConfigString(resolveProperty(devProperties, localProperties, "ANILIST_CLIENT_ID")))
+        buildConfigField("String", "ANILIST_REDIRECT_URI", buildConfigString(resolveProperty(devProperties, localProperties, "ANILIST_REDIRECT_URI")))
         buildConfigField("String", "SIMKL_CLIENT_ID", buildConfigString(resolveProperty(devProperties, localProperties, "SIMKL_CLIENT_ID")))
         buildConfigField("String", "SIMKL_APP_NAME", buildConfigString(resolveProperty(devProperties, localProperties, "SIMKL_APP_NAME", "nuvio")))
         buildConfigField("String", "MDBLIST_CLIENT_ID", buildConfigString(resolveProperty(devProperties, localProperties, "MDBLIST_CLIENT_ID")))
@@ -215,10 +218,10 @@ android {
             // Kept well above every previously side-loaded CI build (max 1046) because
             // Android's installer requires a higher versionCode to update, not just a
             // higher versionName. Bump by 1 per release.
-            versionCode = 10023
+            versionCode = 10024
             // Restarted at 2.0.0 after 1.4.10. Must only ever go up: installed builds offer an
             // update only when the release tag is a higher X.Y.Z than their own versionName.
-            versionName = "2.3.1"
+            versionName = "2.3.2-anilist.1"
             versionNameSuffix = "-lite"
             buildConfigField("boolean", "FEATURE_IN_APP_UPDATES_ENABLED", "true")
             buildConfigField("boolean", "FEATURE_EXTERNAL_TRAILERS_ENABLED", "false")
@@ -348,8 +351,14 @@ android {
         abi {
             isEnable = !buildingAppBundle
             reset()
-            include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-            isUniversalApk = true
+            // Opt in for this delivery; ordinary upstream builds keep their original outputs.
+            if (providers.gradleProperty("anilistArmv7Only").orNull == "true") {
+                include("armeabi-v7a")
+                isUniversalApk = false
+            } else {
+                include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+                isUniversalApk = true
+            }
         }
     }
 

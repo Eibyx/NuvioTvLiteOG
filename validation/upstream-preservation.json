@@ -1,0 +1,15 @@
+{
+  "upstream_commit": "9bd27940ac8669b836807e6143feb0950fe0049d",
+  "original_entries": 1665,
+  "identical": 1659,
+  "modified_original_files": [
+    "app/build.gradle.kts",
+    "app/src/androidTest/java/com/nuvio/tv/ui/screens/settings/TrackingSettingsOverviewTest.kt",
+    "app/src/main/AndroidManifest.xml",
+    "app/src/main/java/com/nuvio/tv/data/repository/WatchProgressRepositoryImpl.kt",
+    "app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsViewModel.kt",
+    "app/src/main/java/com/nuvio/tv/ui/screens/settings/TrackingSettingsScreen.kt"
+  ],
+  "qr_auth_supabase_original": true,
+  "player_native_addons_themes_original": true
+}

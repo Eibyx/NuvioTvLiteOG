@@ -1,0 +1,160 @@
+{
+  "scope": "original dependency archives, not a final APK verification",
+  "libraries": [
+    {
+      "library": "quickjs-kt-android-1.0.5-nuvio.aar",
+      "armv7": [
+        {
+          "file": "jni/armeabi-v7a/libquickjs.so",
+          "sha256": "9d64a2ef7398cb731720d438b2faf3356507b6a84d3c1f7328f9702e902f20c8",
+          "elf32_arm": true
+        }
+      ]
+    },
+    {
+      "library": "lib-exoplayer-release.aar",
+      "armv7": [
+        {
+          "file": "jni/armeabi-v7a/libmedia3_exoplayer_jni.so",
+          "sha256": "07e724f8e8f6216b4e6d64a4a68c89fda54cb3615d9d8cf5cdc7af921ea0f71d",
+          "elf32_arm": true
+        }
+      ]
+    },
+    {
+      "library": "lib-nuvio-engine-android-0.1.5.aar",
+      "armv7": [
+        {
+          "file": "jni/armeabi-v7a/libnuvio_engine.so",
+          "sha256": "0485a603a3a1b54f1442a18ba26e45a1324b642d06819e7ae76e34f6f8c3b93b",
+          "elf32_arm": true
+        }
+      ]
+    },
+    {
+      "library": "lib-decoder-mpegh-release.aar",
+      "armv7": [
+        {
+          "file": "jni/armeabi-v7a/libmpeghJNI.so",
+          "sha256": "f1ebe197d7263f6094f0f6176a6c30cb8254df4f021e2a860f613bb887188b6c",
+          "elf32_arm": true
+        }
+      ]
+    },
+    {
+      "library": "nuvio-libass-release.aar",
+      "armv7": [
+        {
+          "file": "jni/armeabi-v7a/libasskt.so",
+          "sha256": "50ca993f0a253743249efe4656cef481cf191bebcfd2bb085e5891da004c1e56",
+          "elf32_arm": true
+        }
+      ]
+    },
+    {
+      "library": "lib-decoder-ffmpeg-release.aar",
+      "armv7": [
+        {
+          "file": "jni/armeabi-v7a/libffmpegJNI.so",
+          "sha256": "2789c8628e16b8e1b7b32fb934e93f93107c2f71f60d87206467b0e5314e1915",
+          "elf32_arm": true
+        }
+      ]
+    },
+    {
+      "library": "lib-decoder-av1-release.aar",
+      "armv7": [
+        {
+          "file": "jni/armeabi-v7a/libgav1JNI.so",
+          "sha256": "d2e92b9b68ef1a21555f9b54b5e314f4ad8fa41d630dc94145bf95ece4e3533e",
+          "elf32_arm": true
+        }
+      ]
+    },
+    {
+      "library": "lib-decoder-iamf-release.aar",
+      "armv7": [
+        {
+          "file": "jni/armeabi-v7a/libiamf.so",
+          "sha256": "aba3886b9e0d8f38bd16c8dacf74e12d3e14a36d6bc361155d9f331d3e820f37",
+          "elf32_arm": true
+        },
+        {
+          "file": "jni/armeabi-v7a/libiamfJNI.so",
+          "sha256": "0dc76fe3a511764c01d0f3d0154480862a34e5288aadf665345082ac1d9c5217",
+          "elf32_arm": true
+        }
+      ]
+    },
+    {
+      "library": "nextlib-mediainfo-local.aar",
+      "armv7": [
+        {
+          "file": "jni/armeabi-v7a/libmediainfo.so",
+          "sha256": "9037fcf556d7cf746408570f059100ecd66dd64c7a136842f7cb459e7f7e3043",
+          "elf32_arm": true
+        }
+      ]
+    },
+    {
+      "library": "mpv-android-lib-0.1.12.aar",
+      "armv7": [
+        {
+          "file": "jni/armeabi-v7a/libavcodec.so",
+          "sha256": "73c23e5bc9b4b1a2ce69716774c2d08757adcd1f9b3f9fcaea063eaf7715a927",
+          "elf32_arm": true
+        },
+        {
+          "file": "jni/armeabi-v7a/libavdevice.so",
+          "sha256": "9acf4a418b7ebac5225c2395c261d39877a023d61534764dba89c882bb878f08",
+          "elf32_arm": true
+        },
+        {
+          "file": "jni/armeabi-v7a/libavfilter.so",
+          "sha256": "40b1bf450ecedee6c9f7f379784c5a8c41747305b89097610e8ee10db3755538",
+          "elf32_arm": true
+        },
+        {
+          "file": "jni/armeabi-v7a/libavformat.so",
+          "sha256": "63292e5075499bab17473a557eee02327fb212f9b334a22eea2a67c0e2e2b688",
+          "elf32_arm": true
+        },
+        {
+          "file": "jni/armeabi-v7a/libavutil.so",
+          "sha256": "2ba9c7a68efa1d89d4574cbe84373987398590c7e5946ad4674fc140f7186bf2",
+          "elf32_arm": true
+        },
+        {
+          "file": "jni/armeabi-v7a/libc++_shared.so",
+          "sha256": "7ce65fd0fdd49236bc2ee618f6968dbb3fca46434845f563f2bb4c994878853e",
+          "elf32_arm": true
+        },
+        {
+          "file": "jni/armeabi-v7a/libmpv.so",
+          "sha256": "a74de6d7933c220a1eb9eb8ccaa46e9b0f75c5ae2476d468b175bda4d6ad6fee",
+          "elf32_arm": true
+        },
+        {
+          "file": "jni/armeabi-v7a/libplayer.so",
+          "sha256": "d779b13a38a42ec0ccbea549a1799d4a35c7691cff875db40e75df64154efeb8",
+          "elf32_arm": true
+        },
+        {
+          "file": "jni/armeabi-v7a/libswresample.so",
+          "sha256": "a005eab83f7953a6dabeb31e004ff9b32cb09bdf2dd231c84d6967b0cabcdd14",
+          "elf32_arm": true
+        },
+        {
+          "file": "jni/armeabi-v7a/libswscale.so",
+          "sha256": "c5830462c8f81cf2ea49d1347dfe5977cf7f425b427ea0e8e46aa1f7d75e0deb",
+          "elf32_arm": true
+        },
+        {
+          "file": "jni/armeabi-v7a/libxml2.so",
+          "sha256": "4e913cf8a3e4cd547584d01d0ba768fe900c2772772268b524abe9887a3120dd",
+          "elf32_arm": true
+        }
+      ]
+    }
+  ]
+}
