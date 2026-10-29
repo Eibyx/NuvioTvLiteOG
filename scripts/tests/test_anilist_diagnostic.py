@@ -6,6 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'anilist'))
 from prepare_diagnostic_config import public_anon_key
+from apk_inspection import certificate_sha256
 from verify_release_config import validate
 
 
@@ -40,3 +41,14 @@ class DiagnosticConfigurationTests(unittest.TestCase):
             public_anon_key({token({'role': 'anon', 'iss': 'supabase', 'exp': 1})}, now=1000)
         with self.assertRaisesRegex(AssertionError, 'User credential'):
             public_anon_key({token({'role': 'anon', 'iss': 'supabase', 'exp': 2000, 'sub': 'user'})}, now=1000)
+
+
+class SigningOutputTests(unittest.TestCase):
+    def test_sdk_range_in_signer_label_does_not_change_certificate_verification(self):
+        digest = 'ab' * 32
+        for label in ('Signer #1', 'Signer #1 (minSdkVersion=24, maxSdkVersion=35)'):
+            self.assertEqual(digest, certificate_sha256(label + ' certificate SHA-256 digest: ' + digest))
+        with self.assertRaises(AssertionError):
+            certificate_sha256('No certificate')
+        with self.assertRaises(AssertionError):
+            certificate_sha256('certificate SHA-256 digest: ' + digest + '\ncertificate SHA-256 digest: ' + 'cd' * 32)

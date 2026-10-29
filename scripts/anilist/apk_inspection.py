@@ -40,3 +40,10 @@ def native_payload(apk):
             result[name] = hashlib.sha256(data).hexdigest()
     assert result, 'Native payload absent'
     return result
+
+
+def certificate_sha256(report):
+    # New apksigner versions may include an SDK range in the signer label.
+    matches = {value.lower() for value in re.findall(r'certificate SHA-256 digest:\s*([a-fA-F0-9]{64})', report)}
+    assert len(matches) == 1, 'Expected exactly one verified signing certificate'
+    return matches.pop()

@@ -11,12 +11,14 @@ import subprocess
 import zipfile
 from pathlib import Path
 
-from apk_inspection import dex_strings, native_payload
+from apk_inspection import certificate_sha256, dex_strings, native_payload
 from verify_release_config import properties, validate
 
 
 def tool(name):
     sdk = Path(os.environ.get('ANDROID_HOME', os.environ.get('ANDROID_SDK_ROOT', '/nonexistent')))
+    pinned = sdk / 'build-tools' / '36.0.0' / name
+    if pinned.exists(): return str(pinned)
     candidates = sorted(sdk.glob('build-tools/*/' + name), reverse=True)
     return str(candidates[0]) if candidates else shutil.which(name) or name
 
@@ -51,8 +53,8 @@ def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=No
             continue
         assert claims.get('role') not in ('service_role', 'authenticated') and not claims.get('email'), 'Privileged or user JWT in APK'
     signature = subprocess.check_output([tool('apksigner'), 'verify', '--verbose', '--print-certs', str(path)], text=True)
-    signer = re.search(r'Signer #1 certificate SHA-256 digest: ([a-fA-F0-9]+)', signature).group(1).lower()
-    dn = re.search(r'Signer #1 certificate DN: (.+)', signature).group(1)
+    signer = certificate_sha256(signature)
+    dn = re.search(r'certificate DN:\s*(.+)', signature).group(1)
     badging = subprocess.check_output([tool('aapt'), 'dump', 'badging', str(path)], text=True)
     package = re.search(r"package: name='([^']+)' versionCode='(\d+)' versionName='([^']+)'", badging)
     assert package and package[1] == 'com.nuvio.tv.lite', 'Unexpected Lite package ID'
@@ -69,7 +71,7 @@ def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=No
         assert native == original, 'Native library bytes differ from original Lite ARMv7'
         native_match = True
         ref_signature = subprocess.check_output([tool('apksigner'), 'verify', '--print-certs', str(reference)], text=True)
-        reference_signer = re.search(r'Signer #1 certificate SHA-256 digest: ([a-fA-F0-9]+)', ref_signature).group(1).lower()
+        reference_signer = certificate_sha256(ref_signature)
     if diagnostic:
         assert 'CN=Android Debug' in dn and 'O=Android' in dn, 'Diagnostic APK must use an Android debug certificate'
         assert expected, 'Supply the generated debug certificate fingerprint'

@@ -9,7 +9,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from apk_inspection import dex_strings
+from apk_inspection import certificate_sha256, dex_strings
 from verify_apk import tool
 from verify_release_config import properties, validate
 
@@ -43,7 +43,7 @@ def prepare(apk, output, report_path, online=True):
     apk = Path(apk)
     assert hashlib.sha256(apk.read_bytes()).hexdigest() == REFERENCE_SHA256, 'Official reference APK digest changed'
     signature = subprocess.check_output([tool('apksigner'), 'verify', '--print-certs', str(apk)], text=True)
-    signer = re.search(r'Signer #1 certificate SHA-256 digest: ([a-fA-F0-9]+)', signature).group(1).lower()
+    signer = certificate_sha256(signature)
     assert signer == REFERENCE_SIGNER, 'Official reference signing certificate changed'
     strings = dex_strings(apk)
     assert PRIMARY in strings and FALLBACK in strings, 'Original Supabase server constants missing'
