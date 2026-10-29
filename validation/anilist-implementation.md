@@ -1,6 +1,6 @@
 # AniList para NuvioTV Lite original
 
-Estado: implementación experimental, pendiente de completar las verificaciones documentadas en los reportes de pruebas y el informe final. No constituye una validación física en TCL ni una autorización OAuth comprobada.
+Estado: implementación experimental, pendiente de completar las verificaciones documentadas en `test-results.json` y los reportes de Actions. No constituye una validación física en TCL ni una autorización OAuth comprobada.
 
 ## Bases inspeccionadas antes de editar
 
@@ -77,7 +77,7 @@ La página estática no se ha publicado ni registrado automáticamente: no se ha
 
 Upstream lee en release `NUVIO_SUPABASE_URL`, `NUVIO_SUPABASE_ANON_KEY` y opcionalmente `NUVIO_SUPABASE_FALLBACK_URL` desde `local.properties`. Debug admite la precedencia original de `local.dev.properties`. Las direcciones de login por defecto siguen siendo `https://nuvio.tv/link` y `https://nuvio.tv/tv-login`.
 
-No hay valores Supabase proporcionados en este entorno. No se reconstruyen ni se inventan. La verificación de publicación exige claves públicas, consulta `/auth/v1/settings` y comprueba que las constantes esperadas están dentro del APK. Rechaza `service_role`, tokens de usuario y patrones de secretos privados.
+Se recuperaron únicamente los valores públicos anon y URLs de la release oficial ARMv7 v2.3.1-lite. Se verificó la respuesta 200 de `/auth/v1/settings` en `https://api.nuvio.tv`; el fallback `https://api-two.nuvioapp.space` se conserva tal como aparece en la configuración de servidor del APK original. El endpoint fallback original devolvió HTTP 503 en este entorno; no se reemplazó ni se alteró. Están en `local.properties`, ignorado por Git; no se inventan valores ni se introduce una clave administrativa. La evidencia pública, sin incluir el token anon, está en `public-supabase-verification.json`. La configuración del APK nuevo aún no se puede verificar sin compilarlo y firmarlo. La verificación de publicación exige claves públicas, consulta `/auth/v1/settings` y comprueba que las constantes esperadas están dentro del APK. Rechaza `service_role`, tokens de usuario y patrones de secretos privados.
 
 El almacén de firma upstream `nuviotv.jks` no está versionado ni se encuentra en este entorno. No se crea una firma de sustitución para publicar. La capacidad de actualizar una instalación existente exige comparar su certificado, package ID y versionCode; no está verificada sin evidencia de esa instalación.
 
@@ -96,7 +96,7 @@ Variables:
 - `ANILIST_TV_OAUTH_VERIFIED=true` únicamente después de registrar y probar el cliente/retorno en un teléfono y TV.
 - `NUVIO_EXPECTED_SIGNER_SHA256`, opcional para comparar con el certificado realmente instalado; sin ella las notas declaran que no se verificó la actualización.
 
-No es posible leer ni gestionar secretos/variables con el permiso efectivo actual: la API devuelve 403. La lectura de ramas, PR, runs, artefactos y releases sí fue comprobada. Las mutaciones Git se verifican al publicar la rama; el resultado exacto queda en el informe final.
+No es posible leer ni gestionar secretos/variables con el permiso efectivo actual: la API devuelve 403. La lectura de ramas, PR, runs, artefactos y releases sí fue comprobada. Se comprobaron push de la rama, creación/edición de PR, ejecución de Actions y descarga de sus artefactos mediante el conector GitHub. El check AniList pasa en Actions. Issues está deshabilitado y habilitarlo devolvió 403: el check original de plantilla del PR queda pendiente de una issue vinculada, sin modificarlo para ocultar el bloqueo.
 
 ## Límites de validación
 
@@ -106,3 +106,19 @@ No es posible leer ni gestionar secretos/variables con el permiso efectivo actua
 - La selección general de biblioteca/progreso y el actualizador siguen exactamente los originales; el actualizador original consulta las releases de hackerslash, no las de este experimento.
 - Los títulos ambiguos se omiten sin escribir progreso; necesitan ampliar correspondencias verificadas en el futuro.
 - Solo IPv4 privada con teléfono y TV en la misma LAN; redes aisladas de invitados, IPv6-only y restricciones de navegador pendientes de validación física.
+
+
+## Resultado de esta ejecución
+
+- Código de aplicación verificado: `450b83a83c83f9c2c255df096f0770149c4d5ddf` (misma aplicación que el commit de implementación `9769960564d170462585142bb0a37496e5158c40`; el segundo commit corrige solo la preparación del SDK en el workflow).
+- Lite: 2.347 casos JUnit, 2.344 aprobados, 0 fallidos y 3 omitidos heredados. Las 69 pruebas AniList pasan.
+- Base original: 2.278 casos, 2.275 aprobados y las mismas tres omisiones. No falta ningún caso original ni cambia ningún resultado.
+- Python: 21 aprobados; WebCrypto: 3 aprobados. Las 59 pruebas instrumentadas compilan, pero no se ejecutaron por ausencia de dispositivo/emulador.
+- Actions de verificación: https://github.com/Eibyx/NuvioTvLiteOG/actions/runs/40905567712 — aprobado; artefactos descargados mediante el conector y conteos JUnit comprobados.
+- Intento de preparación/publicación: https://github.com/Eibyx/NuvioTvLiteOG/actions/runs/40907456462 — pruebas aprobadas y publicación detenida porque el runner no recibió `LOCAL_PROPERTIES_BASE64` ni los cuatro secretos de firma. No se generó un APK nuevo ni una release.
+- PR en borrador: https://github.com/Eibyx/NuvioTvLiteOG/pull/1. La plantilla original exige una issue vinculada; Issues está deshabilitado y la API denegó habilitarlo (403). Ese check no se ha desactivado ni alterado.
+- `local.properties` contiene únicamente la configuración pública Supabase recuperada del APK oficial; está ignorado por Git y no incluye OAuth AniList ni firma. Completarlo con el cliente/redirect autorizado y la configuración upstream restante, y proporcionarlo mediante `LOCAL_PROPERTIES_BASE64`.
+- No hay enlace de release, descarga ni SHA-256 de un APK final que se pueda entregar. El nombre previsto por el workflow es `NuvioTV-Lite-2.3.2-anilist.1-armeabi-v7a.apk` y el tag previsto es `v2.3.2-anilist.1`.
+- Compatibilidad de actualización no verificada: se conoce el certificado público del APK de referencia, pero no se dispone de la clave privada de firma ni del certificado realmente instalado en el TCL.
+
+Los commits finales de documentación/evidencia no alteran la aplicación validada. Se evita repetir CI en ellos mediante `[skip ci]`; los enlaces anteriores conservan los resultados del código real.

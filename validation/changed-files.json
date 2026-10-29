@@ -212,7 +212,15 @@
     },
     {
       "status": "A",
+      "path": "validation/public-supabase-verification.json"
+    },
+    {
+      "status": "A",
       "path": "validation/test-coverage.md"
+    },
+    {
+      "status": "A",
+      "path": "validation/test-results.json"
     },
     {
       "status": "A",
