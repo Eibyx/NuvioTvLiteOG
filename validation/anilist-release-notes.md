@@ -14,7 +14,7 @@ Port AniList desde NuvioMobileKai: `62b4121af5e09977d87b445faa1cb91b268c6c12`.
 - Nunca reduce el progreso ni reescribe COMPLETED.
 - OAuth con el mismo cliente público de NuvioMobileKai (Client ID `53329`, redirect `nuvio://auth/anilist`): el TV abre la página oficial de AniList en su propio navegador integrado e intercepta la redirección. El token se guarda cifrado con Android Keystore, independiente de la sesión Nuvio.
 - Solo APK Lite `armeabi-v7a`; package `com.nuvio.tv.lite`, versionCode 10024.
-- MPV, ExoPlayer, bibliotecas nativas (idénticas byte a byte a la release oficial), QR/Supabase Nuvio, addons, temas, Trakt, Simkl y MDBList sin cambios.
+- MPV, ExoPlayer y bibliotecas nativas precompiladas idénticas byte a byte a la release oficial ARMv7 (`libdovi_bridge.so` se compila desde las fuentes sin cambios con la configuración DV7 documentada). Código de QR/Supabase Nuvio, addons, temas, Trakt, Simkl y MDBList sin cambios.
 
 ## Conectar AniList desde el TV
 
@@ -31,3 +31,4 @@ Port AniList desde NuvioMobileKai: `62b4121af5e09977d87b445faa1cb91b268c6c12`.
 - AniList guarda progreso acumulado: solo se importa un prefijo de episodios por entrada, no episodios sueltos ni segundos parciales.
 - Correspondencias ambiguas, episodios 0 y numeraciones absolutas sin lista verificada se omiten sin escribir.
 - El actualizador integrado sigue consultando las releases de upstream.
+- Esta compilación solo incluye la configuración pública de Supabase recuperada del APK oficial y el cliente AniList de Mobile. Las claves de Trakt, Simkl, MDBList, TMDB y demás servicios que el mantenedor upstream incluye en su `local.properties` privado no están en este repositorio: esas integraciones pueden aparecer sin configurar hasta que se añada el secreto `LOCAL_PROPERTIES_BASE64` con tus propias claves.

@@ -145,7 +145,7 @@ jobs:
           notes += '\n## Verificación de este APK\n\n'
           notes += f"- Archivo: `{r['apk']}`\n- SHA-256: `{r['sha256']}`\n"
           notes += f"- Package: `{r['package']}` · versionCode {r['version_code']} · versionName `{r['version_name']}`\n"
-          notes += f"- ABI: `{r['abi']}` únicamente · bibliotecas nativas idénticas byte a byte a la release oficial v2.3.1-lite ARMv7\n"
+          notes += f"- ABI: `{r['abi']}` únicamente · bibliotecas nativas precompiladas (MPV, FFmpeg, ExoPlayer, libass) idénticas byte a byte a la release oficial v2.3.1-lite ARMv7; `libdovi_bridge.so` compilada desde las fuentes sin cambios\n"
           notes += f"- Firma: Android Debug (generada en el runner), certificado SHA-256 `{r['signer_sha256']}`\n"
           notes += f"- AniList: Client ID `{r['anilist_client_id']}`, redirect `{r['anilist_redirect_uri']}`\n"
           Path('delivery/RELEASE_NOTES.md').write_text(notes)
