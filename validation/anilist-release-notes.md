@@ -1,6 +1,22 @@
 # NuvioTV Lite + AniList — experimental ARMv7 (firma debug)
 
+NuvioTV-Lite original con integración experimental de AniList, portada desde NuvioMobileKai.
+
+- Sincronización bidireccional de episodios vistos.
+- Importación del progreso existente en AniList.
+- Integración en Ajustes → Seguimiento → Cuentas.
+- APK exclusivo para armeabi-v7a.
+- MPV y ExoPlayer originales.
+- Inicio de sesión QR de Nuvio y Supabase conservados.
+- Firma Android Debug.
+
+Versión experimental: pendiente de pruebas reales de reproducción y autenticación en TCL Android TV.
+
+El APK y su SHA-256 se adjuntan mediante GitHub Actions (sección «Verificación de este APK» al final).
+
 **Pre-release experimental. No es una versión estable.**
+
+## Detalle
 
 Base Lite original: `9bd27940ac8669b836807e6143feb0950fe0049d` (hackerslash/NuvioTV-Lite `dev`, v2.3.1-lite).
 Port AniList desde NuvioMobileKai: `62b4121af5e09977d87b445faa1cb91b268c6c12`.
