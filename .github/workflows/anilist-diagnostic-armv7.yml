@@ -24,6 +24,8 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       CI_USE_DEBUG_SIGNING: 'true'
+      # AGP resolves its debug keystore from ANDROID_USER_HOME first; pin it to the key fingerprinted below.
+      ANDROID_USER_HOME: /home/runner/.android
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,11 +62,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p "$HOME/.android"
-          if [ ! -f "$HOME/.android/debug.keystore" ]; then
-            keytool -genkeypair -keystore "$HOME/.android/debug.keystore" -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=Android Debug,O=Android,C=US'
+          mkdir -p "$ANDROID_USER_HOME"
+          if [ ! -f "$ANDROID_USER_HOME/debug.keystore" ]; then
+            keytool -genkeypair -keystore "$ANDROID_USER_HOME/debug.keystore" -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=Android Debug,O=Android,C=US'
           fi
-          signer="$(keytool -exportcert -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | sha256sum | cut -d ' ' -f 1)"
+          signer="$(keytool -exportcert -keystore "$ANDROID_USER_HOME/debug.keystore" -storepass android -alias androiddebugkey | sha256sum | cut -d ' ' -f 1)"
           echo "DIAGNOSTIC_SIGNER_SHA256=$signer" >> "$GITHUB_ENV"
       - name: Python and phone callback tests
         run: |
@@ -81,6 +83,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Evidence only: which debug keystores exist after the build (paths, no key material).
+          find "$HOME" /usr/local/lib/android -name debug.keystore 2>/dev/null || true
           mapfile -t apks < <(find app/build/outputs/apk/lite/release -maxdepth 1 -name '*.apk')
           test "${#apks[@]}" -eq 1
           mkdir -p delivery
@@ -111,7 +115,7 @@ jobs:
             app/build/outputs/logs/
       - name: Remove local configuration and debug key
         if: always()
-        run: rm -f local.properties "$HOME/.android/debug.keystore"
+        run: rm -f local.properties "$ANDROID_USER_HOME/debug.keystore"
   prerelease:
     if: github.event_name == 'workflow_dispatch' && inputs.publish_prerelease
     needs: diagnostic
