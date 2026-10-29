@@ -72,9 +72,17 @@ jobs:
         run: |
           PYTHONPATH=scripts python3 -m unittest discover -s scripts/tests -v
           node scripts/anilist/test_callback.mjs
-      - name: Test and build only diagnostic Lite ARMv7
+      # Separate invocations: upstream wall-clock tests (debounces, timeouts) must not compete with R8.
+      - name: Lite release unit tests
         run: >-
-          ./gradlew :app:testLiteReleaseUnitTest :app:assembleLiteRelease
+          ./gradlew :app:testLiteReleaseUnitTest
+          -PanilistArmv7Only=true -PanilistDiagnostic=true
+          -Pkotlin.compiler.execution.strategy=in-process --max-workers=2
+          "-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8"
+          --stacktrace
+      - name: Build only Lite ARMv7
+        run: >-
+          ./gradlew :app:assembleLiteRelease
           -PanilistArmv7Only=true -PanilistDiagnostic=true
           -Pkotlin.compiler.execution.strategy=in-process --max-workers=2
           "-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8"
