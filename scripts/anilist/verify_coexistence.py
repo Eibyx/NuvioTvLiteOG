@@ -43,6 +43,13 @@ def parse_manifest(xmltree):
     return result
 
 
+def launcher_labels(badging):
+    """Every application label (all locales) and launcher activity label from `aapt dump badging`."""
+    labels = set(re.findall(r"^application-label(?:-[\w-]+)?:'([^']*)'", badging, re.M))
+    labels |= set(re.findall(r"^(?:leanback-)?launchable-activity:.*? label='([^']*)'", badging, re.M))
+    return labels
+
+
 def compare(standalone, original):
     assert standalone['package'] == STANDALONE_PACKAGE, 'Unexpected standalone package: ' + str(standalone['package'])
     assert original['package'] != standalone['package'], 'Same package as the original app'
@@ -68,7 +75,7 @@ def compare(standalone, original):
 def check(aapt, standalone_apk, original_apk):
     read = lambda apk: parse_manifest(subprocess.check_output([aapt, 'dump', 'xmltree', str(apk), 'AndroidManifest.xml'], text=True))
     badging = subprocess.check_output([aapt, 'dump', 'badging', str(standalone_apk)], text=True)
-    labels = set(re.findall(r"label='([^']*)'", badging))
+    labels = launcher_labels(badging)
     assert labels == {STANDALONE_LABEL}, 'Unexpected launcher labels: ' + ', '.join(sorted(labels))
     report = compare(read(standalone_apk), read(original_apk))
     report['launcher_label'] = STANDALONE_LABEL

@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'anilist'))
-from verify_coexistence import compare, parse_manifest
+from verify_coexistence import compare, launcher_labels, parse_manifest
 
 
 def tree(package, authorities=(), permissions=(), extra=''):
@@ -40,6 +40,13 @@ class CoexistenceTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, 'permission'):
             compare(parse_manifest(tree('com.eibyx.nuviotv.anilist', [],
                                         ['com.nuvio.tv.lite.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'])), ORIGINAL)
+
+    def test_labels_cover_every_locale_and_launcher_but_not_feature_groups(self):
+        badging = ("application-label:'NuvioTV AniList'\napplication-label-hr:'Nuvio'\n"
+                   "launchable-activity: name='a.B'  label='NuvioTV AniList' icon='x'\n"
+                   "leanback-launchable-activity: name='a.B'  label='NuvioTV AniList' icon='x' banner='y'\n"
+                   "feature-group: label=''\n")
+        self.assertEqual({'NuvioTV AniList', 'Nuvio'}, launcher_labels(badging))
 
     def test_same_package_or_updater_is_rejected(self):
         with self.assertRaisesRegex(AssertionError, 'package'):
