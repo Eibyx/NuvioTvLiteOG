@@ -126,3 +126,10 @@ No es posible leer ni gestionar secretos/variables con el permiso efectivo actua
 - Compatibilidad de actualización no verificada: se conoce el certificado público del APK de referencia, pero no se dispone de la clave privada de firma ni del certificado realmente instalado en el TCL.
 
 Los cambios de documentación/evidencia no alteran la aplicación validada. Los enlaces anteriores conservan los resultados del código real; al vincular la issue se vuelve a activar el check original de plantilla.
+
+## Continuación (cliente Mobile + APK ARMv7 verificado)
+
+- Run de compilación verificado: https://github.com/Eibyx/NuvioTvLiteOG/actions/runs/40935340260 (commit `eca65828`): 2.349 casos JUnit Lite release, 0 fallos, 3 omitidos heredados; 71 casos AniList.
+- APK: `NuvioTV-Lite-2.3.2-anilist.1-experimental-debug-signed-armeabi-v7a.apk`, SHA-256 `b4e69088d10cd327a1e14726bb6ac3f709720dffe4ff6000f5a67c21a566b0f2`, solo armeabi-v7a, firma Android Debug (`58e38926…68ec`), 21 bibliotecas nativas: las 20 precompiladas idénticas byte a byte a la release oficial v2.3.1-lite y `libdovi_bridge.so` compilada desde las fuentes sin cambios.
+- AniList: Client ID `53329` y redirect `nuvio://auth/anilist` de NuvioMobileKai, comprobados en BuildConfig y DEX. Conexión no probada físicamente.
+- Publicación: el job de pre-release recibió `403 Resource not accessible by integration`; el `GITHUB_TOKEN` del repositorio no tiene permiso de escritura.
