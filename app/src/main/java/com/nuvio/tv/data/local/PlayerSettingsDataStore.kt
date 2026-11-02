@@ -302,6 +302,8 @@ data class PlayerSettings(
     val exoChaptersEnabled: Boolean = false,
     val mpvHi10pGnextSoftwareFallbackEnabled: Boolean = false,
     val mpvHardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE,
+    val mpvCacheForwardMb: Int = MpvCacheSize.DEFAULT_FORWARD_MB,
+    val mpvCacheBackMb: Int = MpvCacheSize.DEFAULT_BACK_MB,
     // Display settings
     val frameRateMatchingMode: FrameRateMatchingMode = FrameRateMatchingMode.OFF,
     val resolutionMatchingEnabled: Boolean = false,
@@ -439,6 +441,27 @@ enum class SubtitleOrganizationMode {
 
 enum class MpvHardwareDecodeMode {
     LEGACY_DIRECT_COPY, AUTO_SAFE, HARDWARE_COPY, HARDWARE_DIRECT, DISABLED
+}
+
+/** mpv demuxer cache sizes (demuxer-max-bytes / demuxer-max-back-bytes). Defaults match the former fixed 64 MiB. */
+object MpvCacheSize {
+    const val DEFAULT_FORWARD_MB = 64
+    const val DEFAULT_BACK_MB = 64
+    val FORWARD_OPTIONS_MB = listOf(32, 64, 128, 256, 384, 512, 768, 1024)
+    val BACK_OPTIONS_MB = listOf(0, 16, 32, 64, 128, 256)
+
+    fun forwardOrDefault(value: Int?): Int = value?.takeIf { it in FORWARD_OPTIONS_MB } ?: DEFAULT_FORWARD_MB
+    fun backOrDefault(value: Int?): Int = value?.takeIf { it in BACK_OPTIONS_MB } ?: DEFAULT_BACK_MB
+    fun bytes(mb: Int): Long = mb.toLong() * 1024L * 1024L
+
+    /** Minutes of video held by [mb] at [mbps] megabits per second. */
+    fun minutesAt(mb: Int, mbps: Double = REFERENCE_MBPS): Double = mb * 8.0 * 1.048576 / mbps / 60.0
+
+    /** Forward plus back cache above a quarter of physical RAM risks the low-memory killer. */
+    fun isHighForDevice(totalCacheMb: Int, deviceRamMb: Long): Boolean =
+        deviceRamMb > 0 && totalCacheMb * 4L > deviceRamMb
+
+    const val REFERENCE_MBPS = 5.0
 }
 
 enum class AutoSkipSegmentType(val storedValue: String) {
@@ -592,6 +615,8 @@ class PlayerSettingsDataStore @Inject constructor(
     private val mpvHi10pGnextSoftwareFallbackEnabledKey =
         booleanPreferencesKey("mpv_hi10p_gnext_software_fallback_enabled")
     private val mpvHardwareDecodeModeKey = stringPreferencesKey("mpv_hardware_decode_mode")
+    private val mpvCacheForwardMbKey = intPreferencesKey("mpv_cache_forward_mb")
+    private val mpvCacheBackMbKey = intPreferencesKey("mpv_cache_back_mb")
     private val frameRateMatchingKey = booleanPreferencesKey("frame_rate_matching")
     private val frameRateMatchingModeKey = stringPreferencesKey("frame_rate_matching_mode")
     private val resolutionMatchingEnabledKey = booleanPreferencesKey("resolution_matching_enabled")
@@ -984,6 +1009,8 @@ class PlayerSettingsDataStore @Inject constructor(
                 mpvHi10pGnextSoftwareFallbackEnabled =
                     prefs[mpvHi10pGnextSoftwareFallbackEnabledKey] ?: false,
                 mpvHardwareDecodeMode = parseMpvHardwareDecodeMode(prefs[mpvHardwareDecodeModeKey]),
+                mpvCacheForwardMb = MpvCacheSize.forwardOrDefault(prefs[mpvCacheForwardMbKey]),
+                mpvCacheBackMb = MpvCacheSize.backOrDefault(prefs[mpvCacheBackMbKey]),
                 frameRateMatchingMode = prefs[frameRateMatchingModeKey]?.let {
                     runCatching { FrameRateMatchingMode.valueOf(it) }.getOrNull()
                 } ?: if (prefs[frameRateMatchingKey] == true) FrameRateMatchingMode.START_STOP else FrameRateMatchingMode.OFF,
@@ -1593,6 +1620,18 @@ class PlayerSettingsDataStore @Inject constructor(
     suspend fun setMpvHardwareDecodeMode(mode: MpvHardwareDecodeMode) {
         store().edit { prefs ->
             prefs[mpvHardwareDecodeModeKey] = mode.name
+        }
+    }
+
+    suspend fun setMpvCacheForwardMb(mb: Int) {
+        store().edit { prefs ->
+            prefs[mpvCacheForwardMbKey] = MpvCacheSize.forwardOrDefault(mb)
+        }
+    }
+
+    suspend fun setMpvCacheBackMb(mb: Int) {
+        store().edit { prefs ->
+            prefs[mpvCacheBackMbKey] = MpvCacheSize.backOrDefault(mb)
         }
     }
 

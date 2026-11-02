@@ -78,6 +78,9 @@ private val localOnlyLayoutProfileSettingsKeys = setOf(
 )
 
 private val localOnlyPlayerProfileSettingsKeys = setOf(
+    // mpv cache sizes depend on this device's RAM.
+    "mpv_cache_forward_mb",
+    "mpv_cache_back_mb",
     "player_preference",
     "internal_player_engine",
     "auto_switch_internal_player_on_error",

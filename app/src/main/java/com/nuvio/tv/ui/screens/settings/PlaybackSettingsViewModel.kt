@@ -208,6 +208,14 @@ class PlaybackSettingsViewModel @Inject constructor(
         playerSettingsDataStore.setMpvHardwareDecodeMode(mode)
     }
 
+    suspend fun setMpvCacheForwardMb(mb: Int) {
+        playerSettingsDataStore.setMpvCacheForwardMb(mb)
+    }
+
+    suspend fun setMpvCacheBackMb(mb: Int) {
+        playerSettingsDataStore.setMpvCacheBackMb(mb)
+    }
+
     suspend fun setMpvHi10pGnextSoftwareFallbackEnabled(enabled: Boolean) {
         playerSettingsDataStore.setMpvHi10pGnextSoftwareFallbackEnabled(enabled)
     }

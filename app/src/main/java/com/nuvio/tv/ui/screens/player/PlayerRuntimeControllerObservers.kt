@@ -424,6 +424,11 @@ internal fun PlayerRuntimeController.observeSubtitleSettings() {
             if (isUsingMpvEngine() && previousMpvHardwareDecodeMode != mpvHardwareDecodeModeSetting) {
                 mpvView?.applyHardwareDecodeMode(mpvHardwareDecodeModeSetting)
             }
+            if (settings.mpvCacheForwardMb != mpvCacheForwardMbSetting || settings.mpvCacheBackMb != mpvCacheBackMbSetting) {
+                mpvCacheForwardMbSetting = settings.mpvCacheForwardMb
+                mpvCacheBackMbSetting = settings.mpvCacheBackMb
+                if (isUsingMpvEngine()) mpvView?.applyCacheSizes(mpvCacheForwardMbSetting, mpvCacheBackMbSetting)
+            }
 
             val resolvedAudioLanguages = resolvePreferredAudioLanguages(
                 preferredAudioLanguage = settings.preferredAudioLanguage,

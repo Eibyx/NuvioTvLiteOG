@@ -30,28 +30,28 @@ class CoexistenceTests(unittest.TestCase):
         self.assertEqual({'com.nuvio.tv.lite.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'}, ORIGINAL['permissions'])
 
     def test_standalone_with_derived_names_coexists(self):
-        standalone = parse_manifest(tree('com.eibyx.nuviotv.anilist', ['com.eibyx.nuviotv.anilist.fileprovider'],
-                                         ['com.eibyx.nuviotv.anilist.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION']))
+        standalone = parse_manifest(tree('com.eibyx.nuviotvog', ['com.eibyx.nuviotvog.fileprovider'],
+                                         ['com.eibyx.nuviotvog.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION']))
         self.assertEqual([], compare(standalone, ORIGINAL)['install_conflicts'])
 
     def test_reused_authority_or_permission_is_an_install_conflict(self):
         with self.assertRaisesRegex(AssertionError, 'authority'):
-            compare(parse_manifest(tree('com.eibyx.nuviotv.anilist', ['com.nuvio.tv.lite.fileprovider'])), ORIGINAL)
+            compare(parse_manifest(tree('com.eibyx.nuviotvog', ['com.nuvio.tv.lite.fileprovider'])), ORIGINAL)
         with self.assertRaisesRegex(AssertionError, 'permission'):
-            compare(parse_manifest(tree('com.eibyx.nuviotv.anilist', [],
+            compare(parse_manifest(tree('com.eibyx.nuviotvog', [],
                                         ['com.nuvio.tv.lite.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'])), ORIGINAL)
 
     def test_labels_cover_every_locale_and_launcher_but_not_feature_groups(self):
-        badging = ("application-label:'NuvioTV AniList'\napplication-label-hr:'Nuvio'\n"
-                   "launchable-activity: name='a.B'  label='NuvioTV AniList' icon='x'\n"
-                   "leanback-launchable-activity: name='a.B'  label='NuvioTV AniList' icon='x' banner='y'\n"
+        badging = ("application-label:'NuvioTvOG'\napplication-label-hr:'Nuvio'\n"
+                   "launchable-activity: name='a.B'  label='NuvioTvOG' icon='x'\n"
+                   "leanback-launchable-activity: name='a.B'  label='NuvioTvOG' icon='x' banner='y'\n"
                    "feature-group: label=''\n")
-        self.assertEqual({'NuvioTV AniList', 'Nuvio'}, launcher_labels(badging))
+        self.assertEqual({'NuvioTvOG', 'Nuvio'}, launcher_labels(badging))
 
     def test_same_package_or_updater_is_rejected(self):
         with self.assertRaisesRegex(AssertionError, 'package'):
             compare(parse_manifest(tree('com.nuvio.tv.lite')), ORIGINAL)
-        updater = tree('com.eibyx.nuviotv.anilist', extra='\n      E: service (line=9)\n        A: android:name(0x01010003)="com.nuvio.tv.updater.UpdateJobService" (Raw: "x")')
+        updater = tree('com.eibyx.nuviotvog', extra='\n      E: service (line=9)\n        A: android:name(0x01010003)="com.nuvio.tv.updater.UpdateJobService" (Raw: "x")')
         with self.assertRaisesRegex(AssertionError, 'updater'):
             compare(parse_manifest(updater), ORIGINAL)
 

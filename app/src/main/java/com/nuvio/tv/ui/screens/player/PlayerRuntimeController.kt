@@ -25,6 +25,7 @@ import com.nuvio.tv.core.tracking.TrackingScrobbleCoordinator
 import com.nuvio.tv.core.torrent.TorrentService
 import com.nuvio.tv.data.local.AutoSkipSegmentType
 import com.nuvio.tv.data.local.InternalPlayerEngine
+import com.nuvio.tv.data.local.MpvCacheSize
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.NextEpisodeThresholdMode
 import com.nuvio.tv.data.local.AudioDelayRouteDataStore
@@ -572,6 +573,8 @@ class PlayerRuntimeController(
         PlayerSettings.DEFAULT_STILL_WATCHING_EPISODE_THRESHOLD
     internal var mpvHi10pGnextSoftwareFallbackEnabledSetting: Boolean = false
     internal var mpvHardwareDecodeModeSetting: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE
+    internal var mpvCacheForwardMbSetting: Int = MpvCacheSize.DEFAULT_FORWARD_MB
+    internal var mpvCacheBackMbSetting: Int = MpvCacheSize.DEFAULT_BACK_MB
     internal var mpvPreferredAudioLanguages: List<String> = emptyList()
     internal var currentStreamBingeGroup: String? = navigationArgs.bingeGroup
     // Per-device delay + current stream's behaviorHints.audioDelayMs + the user's tweak on that stream.

@@ -8,8 +8,8 @@ shared user ID. This reads both binary manifests through aapt; it does not insta
 import re
 import subprocess
 
-STANDALONE_PACKAGE = 'com.eibyx.nuviotv.anilist'
-STANDALONE_LABEL = 'NuvioTV AniList'
+STANDALONE_PACKAGE = 'com.eibyx.nuviotvog'
+STANDALONE_LABEL = 'NuvioTvOG'
 
 
 def parse_manifest(xmltree):

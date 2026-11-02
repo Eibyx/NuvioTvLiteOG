@@ -12,6 +12,21 @@ ALLOWED = {
     'app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsViewModel.kt',
     'app/src/main/java/com/nuvio/tv/ui/screens/settings/TrackingSettingsScreen.kt',
 }
+# Owner-requested MPV demuxer cache setting (Ajustes > Reproducción > Vídeo > Búfer de MPV).
+# Kotlin only: the option values passed to libmpv; the native MPV/ExoPlayer libraries are untouched.
+MPV_CACHE_SETTING = {
+    'app/src/main/java/com/nuvio/tv/core/sync/ProfileSettingsSyncService.kt',
+    'app/src/main/java/com/nuvio/tv/data/local/PlayerSettingsDataStore.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/NuvioMpvSurfaceView.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerRuntimeController.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerRuntimeControllerInitialization.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerRuntimeControllerMpv.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerRuntimeControllerObservers.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/settings/PlaybackSettingsModel.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/settings/PlaybackSettingsViewModel.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/settings/PlaybackVideoSettings.kt',
+}
+ALLOWED |= MPV_CACHE_SETTING
 PROTECTED = [
     'app/src/main/java/com/nuvio/tv/core/auth/AuthManager.kt',
     'app/src/main/java/com/nuvio/tv/core/di/SupabaseModule.kt',
@@ -42,7 +57,8 @@ def verify(ref=None):
     assert not set(changed).intersection(PROTECTED), 'Nuvio authentication was changed'
     return {'upstream_commit':UPSTREAM,'original_entries':len(original),'identical':len(identical),
         'modified_original_files':changed,'qr_auth_supabase_original':True,
-        'player_native_addons_themes_original':True}
+        'player_native_addons_themes_original':True,
+        'mpv_cache_setting_files':sorted(set(changed) & MPV_CACHE_SETTING)}
 
 if __name__ == '__main__':
     p=argparse.ArgumentParser(); p.add_argument('--ref'); p.add_argument('--output'); args=p.parse_args()

@@ -111,9 +111,9 @@ fun truthy(value: String?): Boolean {
 
 val buildingAppBundle = gradle.startParameter.taskNames.any { it.contains("bundle", ignoreCase = true) }
 val useDebugReleaseSigning = env("CI_USE_DEBUG_SIGNING").equals("true", ignoreCase = true)
-// Experimental AniList build that installs beside the original Lite app (own package and label).
+// NuvioTvOG: experimental AniList build that installs beside the original Lite app (own package and label).
 val anilistStandalone = providers.gradleProperty("anilistStandalone").orNull == "true"
-val anilistStandaloneApplicationId = "com.eibyx.nuviotv.anilist"
+val anilistStandaloneApplicationId = "com.eibyx.nuviotvog"
 val useLocalFfmpegDecoder = truthy(
     providers.gradleProperty("useLocalFfmpegDecoder").orNull
         ?: env("USE_LOCAL_FFMPEG_DECODER")
@@ -435,7 +435,7 @@ androidComponents {
     if (anilistStandalone) {
         onVariants(selector().withBuildType("release").withFlavor("distribution" to "lite")) { variant ->
             variant.applicationId.set(anilistStandaloneApplicationId)
-            variant.outputs.forEach { it.versionName.set("2.3.2-anilist.1-standalone-debug-signed") }
+            variant.outputs.forEach { it.versionName.set("2.3.2-og.1-standalone-debug-signed") }
         }
     }
     // Only full and lite ship the in-app updater.

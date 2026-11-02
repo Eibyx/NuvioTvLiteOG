@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.util.Log
 import android.view.SurfaceHolder
+import com.nuvio.tv.data.local.MpvCacheSize
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.SubtitleStyleSettings
 import `is`.xyz.mpv.BaseMPVView
@@ -29,6 +30,8 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
     private var requestedMediaUrl: String? = null
     private var pathAtMediaRequest: String? = null
     private var hardwareDecodeMode: MpvHardwareDecodeMode = MpvHardwareDecodeMode.AUTO_SAFE
+    private var cacheForwardBytes: Long = MpvCacheSize.bytes(MpvCacheSize.DEFAULT_FORWARD_MB)
+    private var cacheBackBytes: Long = MpvCacheSize.bytes(MpvCacheSize.DEFAULT_BACK_MB)
     private var hi10pGnextSoftwareFallbackActive = false
     private var appliedHi10pGnextSoftwareFallback: Boolean? = null
     private var cachedTrackList: MpvTrackListCache? = null
@@ -306,6 +309,19 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
             mpv.setPropertyString("hwdec", mode.toMpvHwdecValue())
         }.onFailure {
             Log.w(TAG, "Failed to apply mpv hardware decode mode ($mode): ${it.message}")
+        }
+    }
+
+    /** User-selected demuxer cache; applied live when mpv is already running. */
+    fun applyCacheSizes(forwardMb: Int, backMb: Int) {
+        cacheForwardBytes = MpvCacheSize.bytes(forwardMb)
+        cacheBackBytes = MpvCacheSize.bytes(backMb)
+        if (!initialized) return
+        runCatching {
+            mpv.setPropertyString("demuxer-max-bytes", "$cacheForwardBytes")
+            mpv.setPropertyString("demuxer-max-back-bytes", "$cacheBackBytes")
+        }.onFailure {
+            Log.w(TAG, "Failed to apply mpv cache sizes ($forwardMb/$backMb MiB): ${it.message}")
         }
     }
 
@@ -766,8 +782,8 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         mpv.setOptionString("tls-verify", "yes")
         mpv.setOptionString("tls-ca-file", "${context.filesDir.path}/cacert.pem")
         mpv.setOptionString("input-default-bindings", "yes")
-        mpv.setOptionString("demuxer-max-bytes", "${64 * 1024 * 1024}")
-        mpv.setOptionString("demuxer-max-back-bytes", "${64 * 1024 * 1024}")
+        mpv.setOptionString("demuxer-max-bytes", "$cacheForwardBytes")
+        mpv.setOptionString("demuxer-max-back-bytes", "$cacheBackBytes")
         mpv.setOptionString("keep-open", "yes")
         mpv.setOptionString("softvol", "yes")
         mpv.setOptionString("volume-max", MPV_MAX_VOLUME_PERCENT.toInt().toString())

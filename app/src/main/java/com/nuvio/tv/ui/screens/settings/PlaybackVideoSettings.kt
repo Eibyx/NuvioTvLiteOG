@@ -38,13 +38,16 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.R
+import com.nuvio.tv.core.device.DeviceMemoryTier
 import com.nuvio.tv.core.player.DisplayCapabilities
 import com.nuvio.tv.data.local.Dv7HandlingMode
 import com.nuvio.tv.data.local.FrameRateMatchingMode
+import com.nuvio.tv.data.local.MpvCacheSize
 import com.nuvio.tv.data.local.MpvHardwareDecodeMode
 import com.nuvio.tv.data.local.PlayerPreference
 import com.nuvio.tv.data.local.PlayerSettings
 import com.nuvio.tv.ui.theme.NuvioTheme
+import java.util.Locale
 
 @Composable
 internal fun PlaybackVideoSection(
@@ -165,8 +168,34 @@ internal fun PlaybackVideoSection(
             },
             enabled = enabled
         )
+
+        SettingsSectionLabel(text = stringResource(R.string.playback_mpv_cache_label))
+        SettingsActionRow(
+            title = stringResource(R.string.playback_mpv_cache_forward_title),
+            subtitle = stringResource(R.string.playback_mpv_cache_forward_sub),
+            value = mpvCacheSizeLabel(settings.mpvCacheForwardMb),
+            titleTrailingIcon = if (mpvCacheIsHigh(settings)) Icons.Default.Warning else null,
+            titleTrailingIconTint = NuvioTheme.colors.Warning,
+            enabled = enabled,
+            onClick = { onOpenDialog(PlaybackDialog.MPV_CACHE_FORWARD) }
+        )
+        SettingsActionRow(
+            title = stringResource(R.string.playback_mpv_cache_back_title),
+            subtitle = stringResource(R.string.playback_mpv_cache_back_sub),
+            value = mpvCacheSizeLabel(settings.mpvCacheBackMb),
+            enabled = enabled,
+            onClick = { onOpenDialog(PlaybackDialog.MPV_CACHE_BACK) }
+        )
     }
 }
+
+private fun mpvCacheIsHigh(settings: PlayerSettings): Boolean =
+    MpvCacheSize.isHighForDevice(settings.mpvCacheForwardMb + settings.mpvCacheBackMb, DeviceMemoryTier.totalRamMb)
+
+@Composable
+private fun mpvCacheSizeLabel(mb: Int): String =
+    if (mb == 0) stringResource(R.string.playback_mpv_cache_off)
+    else stringResource(R.string.playback_mpv_cache_mb, mb)
 
 @Composable
 private fun rememberDisplayCapabilities(): DisplayCapabilities.Snapshot {
@@ -326,6 +355,30 @@ internal fun VideoSettingsDialogs(
             },
             onDismiss = onDismiss
         )
+        PlaybackDialog.MPV_CACHE_FORWARD -> MpvCacheSizeDialog(
+            title = stringResource(R.string.playback_mpv_cache_forward_title),
+            options = MpvCacheSize.FORWARD_OPTIONS_MB,
+            defaultMb = MpvCacheSize.DEFAULT_FORWARD_MB,
+            selectedMb = settings.mpvCacheForwardMb,
+            otherMb = settings.mpvCacheBackMb,
+            onSelected = { mb ->
+                onUpdate { setMpvCacheForwardMb(mb) }
+                onDismiss()
+            },
+            onDismiss = onDismiss
+        )
+        PlaybackDialog.MPV_CACHE_BACK -> MpvCacheSizeDialog(
+            title = stringResource(R.string.playback_mpv_cache_back_title),
+            options = MpvCacheSize.BACK_OPTIONS_MB,
+            defaultMb = MpvCacheSize.DEFAULT_BACK_MB,
+            selectedMb = settings.mpvCacheBackMb,
+            otherMb = settings.mpvCacheForwardMb,
+            onSelected = { mb ->
+                onUpdate { setMpvCacheBackMb(mb) }
+                onDismiss()
+            },
+            onDismiss = onDismiss
+        )
         else -> Unit
     }
 }
@@ -408,6 +461,51 @@ private fun Dv7HandlingModeDialog(
         onDismiss = onDismiss,
         width = 460.dp,
         maxHeight = 360.dp
+    )
+}
+
+@Composable
+private fun MpvCacheSizeDialog(
+    title: String,
+    options: List<Int>,
+    defaultMb: Int,
+    selectedMb: Int,
+    otherMb: Int,
+    onSelected: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val ramMb = DeviceMemoryTier.totalRamMb
+    val ramGb = if (ramMb > 0) String.format(Locale.getDefault(), "%.1f", ramMb / 1024.0) else "?"
+    val pickerOptions = options.map { mb ->
+        val details = buildList {
+            if (mb > 0) {
+                val minutes = MpvCacheSize.minutesAt(mb)
+                add(stringResource(
+                    R.string.playback_mpv_cache_minutes,
+                    String.format(Locale.getDefault(), if (minutes < 10) "%.1f" else "%.0f", minutes)
+                ))
+            }
+            if (mb == defaultMb) add(stringResource(R.string.playback_mpv_cache_default))
+            if (MpvCacheSize.isHighForDevice(mb + otherMb, ramMb)) {
+                add(stringResource(R.string.playback_mpv_cache_high_ram, ramGb))
+            }
+        }
+        SettingsPickerOption(
+            value = mb,
+            title = mpvCacheSizeLabel(mb),
+            description = details.joinToString(" · ").ifEmpty { null }
+        )
+    }
+
+    SettingsSingleChoiceDialog(
+        title = title,
+        subtitle = stringResource(R.string.playback_mpv_cache_dialog_subtitle, ramGb),
+        options = pickerOptions,
+        selectedValue = selectedMb,
+        onOptionSelected = onSelected,
+        onDismiss = onDismiss,
+        width = 480.dp,
+        maxHeight = 420.dp
     )
 }
 

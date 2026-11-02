@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="playback_mpv_cache_label">Búfer de MPV</string>
+    <string name="playback_mpv_cache_forward_title">Precarga hacia delante</string>
+    <string name="playback_mpv_cache_forward_sub">Cuánto vídeo descarga MPV por delante de lo que estás viendo</string>
+    <string name="playback_mpv_cache_back_title">Búfer hacia atrás</string>
+    <string name="playback_mpv_cache_back_sub">Vídeo ya visto que se guarda en memoria para retroceder sin volver a descargar</string>
+    <string name="playback_mpv_cache_mb">%1$d MB</string>
+    <string name="playback_mpv_cache_off">Desactivado</string>
+    <string name="playback_mpv_cache_minutes">≈ %1$s min a 1080p (5 Mbit/s)</string>
+    <string name="playback_mpv_cache_default">Predeterminado</string>
+    <string name="playback_mpv_cache_high_ram">Alto para este dispositivo (%1$s GB de RAM): la app podría cerrarse durante la reproducción</string>
+    <string name="playback_mpv_cache_dialog_subtitle">La memoria usada es delante + atrás. Este dispositivo: %1$s GB de RAM. Solo afecta a MPV y a este dispositivo.</string>
+</resources>

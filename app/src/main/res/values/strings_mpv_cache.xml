@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="playback_mpv_cache_label">MPV buffer</string>
+    <string name="playback_mpv_cache_forward_title">Preload ahead</string>
+    <string name="playback_mpv_cache_forward_sub">How much video MPV downloads ahead of what you are watching</string>
+    <string name="playback_mpv_cache_back_title">Keep behind</string>
+    <string name="playback_mpv_cache_back_sub">Already watched video kept in memory to rewind without downloading again</string>
+    <string name="playback_mpv_cache_mb">%1$d MB</string>
+    <string name="playback_mpv_cache_off">Off</string>
+    <string name="playback_mpv_cache_minutes">≈ %1$s min at 1080p (5 Mbit/s)</string>
+    <string name="playback_mpv_cache_default">Default</string>
+    <string name="playback_mpv_cache_high_ram">High for this device (%1$s GB RAM): the app may close during playback</string>
+    <string name="playback_mpv_cache_dialog_subtitle">Memory used is ahead + behind. This device: %1$s GB RAM. Applies only to MPV, on this device.</string>
+</resources>
