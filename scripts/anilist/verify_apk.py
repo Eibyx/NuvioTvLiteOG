@@ -27,7 +27,8 @@ def tool(name):
     return str(candidates[0]) if candidates else shutil.which(name) or name
 
 
-def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=None, reference=None, standalone=False):
+def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=None, reference=None, standalone=False,
+            fixed_signing=False):
     validate(values, require_anilist=not diagnostic)
     path = Path(apk)
     native = native_payload(path)
@@ -83,11 +84,18 @@ def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=No
         ref_signature = subprocess.check_output([tool('apksigner'), 'verify', '--print-certs', str(reference)], text=True)
         reference_signer = certificate_sha256(ref_signature)
     if diagnostic:
-        assert 'CN=Android Debug' in dn and 'O=Android' in dn, 'Diagnostic APK must use an Android debug certificate'
-        assert expected, 'Supply the generated debug certificate fingerprint'
+        if fixed_signing:
+            # NuvioTvOG's own key: same certificate on every build so updates install in place.
+            assert standalone, 'Only NuvioTvOG uses the fixed key'
+            assert 'CN=NuvioTvOG' in dn, 'Fixed-key APK must use the NuvioTvOG certificate'
+            assert expected, 'Supply the pinned NuvioTvOG certificate fingerprint'
+            assert 'debug-signed' not in package[3], 'Fixed-key APK must not carry the debug-signed label'
+        else:
+            assert 'CN=Android Debug' in dn and 'O=Android' in dn, 'Diagnostic APK must use an Android debug certificate'
+            assert expected, 'Supply the generated debug certificate fingerprint'
+            label = 'standalone-debug-signed' if standalone else 'diagnostic-debug-signed'
+            assert label in package[3], 'Debug-signed version label missing'
         assert native_match, 'A diagnostic APK requires the original native reference'
-        label = 'standalone-debug-signed' if standalone else 'diagnostic-debug-signed'
-        assert label in package[3], 'Debug-signed version label missing'
         assert (values.get('ANILIST_CLIENT_ID'), values.get('ANILIST_REDIRECT_URI')) == MOBILE_CLIENT, 'Debug-signed delivery reuses only the NuvioMobileKai AniList client'
         assert build_config, 'BuildConfig evidence required for the AniList configuration'
         generated = Path(build_config).read_text()
@@ -96,7 +104,8 @@ def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=No
             assert match and json.loads(match.group(1)) == expected_value, 'Unexpected AniList client in BuildConfig'
     return {'apk': path.name, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(), 'package': package[1],
             'version_code': int(package[2]), 'version_name': package[3], 'abi': 'armeabi-v7a',
-            'signer_sha256': signer, 'signer_dn': dn, 'signing': 'android_debug' if diagnostic else 'configured',
+            'signer_sha256': signer, 'signer_dn': dn,
+            'signing': 'fixed' if fixed_signing else ('android_debug' if diagnostic else 'configured'),
             'update_certificate_verified': bool(expected) and not diagnostic,
             'official_reference_signer_sha256': reference_signer,
             'can_update_official_reference_certificate': signer == reference_signer if reference_signer else None,
@@ -118,9 +127,10 @@ if __name__ == '__main__':
     parser.add_argument('--build-config')
     parser.add_argument('--reference-apk')
     parser.add_argument('--standalone', action='store_true')
+    parser.add_argument('--fixed-signing', action='store_true')
     args = parser.parse_args()
     result = inspect(args.apk, properties(args.properties), args.expected_signer, args.diagnostic,
-                     args.build_config, args.reference_apk, args.standalone)
+                     args.build_config, args.reference_apk, args.standalone, args.fixed_signing)
     if args.standalone:
         assert args.reference_apk, 'Coexistence is checked against the original Lite APK'
         result['coexistence_with_original'] = check_coexistence(tool('aapt'), args.apk, args.reference_apk)

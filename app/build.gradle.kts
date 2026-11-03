@@ -114,6 +114,8 @@ val useDebugReleaseSigning = env("CI_USE_DEBUG_SIGNING").equals("true", ignoreCa
 // NuvioTvOG: experimental AniList build that installs beside the original Lite app (own package and label).
 val anilistStandalone = providers.gradleProperty("anilistStandalone").orNull == "true"
 val anilistStandaloneApplicationId = "com.eibyx.nuviotvog"
+// Set by CI when NuvioTvOG is signed with its fixed key instead of a per-run Android debug key.
+val anilistFixedSigning = providers.gradleProperty("anilistFixedSigning").orNull == "true"
 val useLocalFfmpegDecoder = truthy(
     providers.gradleProperty("useLocalFfmpegDecoder").orNull
         ?: env("USE_LOCAL_FFMPEG_DECODER")
@@ -436,8 +438,8 @@ androidComponents {
         onVariants(selector().withBuildType("release").withFlavor("distribution" to "lite")) { variant ->
             variant.applicationId.set(anilistStandaloneApplicationId)
             variant.outputs.forEach {
-                it.versionName.set("2.3.2-og.2-standalone-debug-signed")
-                it.versionCode.set(10025)
+                it.versionName.set(if (anilistFixedSigning) "2.3.2-og.3" else "2.3.2-og.3-standalone-debug-signed")
+                it.versionCode.set(10026)
             }
         }
     }

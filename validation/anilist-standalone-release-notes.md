@@ -1,11 +1,12 @@
-# NuvioTvOG — experimental ARMv7 (firma debug)
+# NuvioTvOG (ARMv7)
 
 NuvioTV-Lite original con la integración experimental de AniList portada desde NuvioMobileKai, como **aplicación propia**: **NuvioTvOG**, package `com.eibyx.nuviotvog`. Se instala junto a NuvioTV-Lite original sin desinstalarla ni modificarla.
 
-**Pre-release experimental. No es una versión estable.** Las pre-releases anteriores se conservan sin cambios.
+**Firma fija:** desde esta versión, NuvioTvOG se firma siempre con la misma clave. Las próximas versiones se instalan **encima**, conservando la sesión y los ajustes. Las pre-releases anteriores se conservan sin cambios.
 
 ## Novedades
 
+- **Actualizaciones sin desinstalar:** firma fija de NuvioTvOG (certificado SHA-256 `09778027af6ff49b4e3393f1e786d8b65040abe25c148c3ed0724c7abfc76ceb`).
 - **Tamaño de la interfaz (zoom):** Ajustes → Apariencia → **Tamaño de la interfaz**: 60 %, 70 %, 80 %, 90 %, **100 % (original)**, 110 % o 120 %.
   - Escala menús, pósters, textos, iconos y controles del reproductor en la misma proporción; se aplica al momento.
   - Menos de 100 %: cabe más contenido en pantalla. Más de 100 %: se lee mejor de lejos.
@@ -32,7 +33,7 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 ## Instalación
 
-> Esta versión tiene otra firma debug que la anterior de NuvioTvOG: si ya tenías NuvioTvOG instalada, desinstálala antes (se pierde su sesión y sus ajustes). NuvioTV-Lite original no se toca.
+> **Última desinstalación:** si tienes una NuvioTvOG anterior (v0.3.0 o v0.4.0, firmadas con claves debug), desinstálala una vez antes de instalar esta: `pm uninstall com.eibyx.nuviotvog`. Se pierden su sesión y sus ajustes. Desde esta versión, las siguientes se instalan encima sin desinstalar. NuvioTV-Lite original no se toca.
 
 1. Instala el APK en el TCL. Android lo trata como una aplicación distinta: no pide desinstalar NuvioTV-Lite y no toca sus datos.
 2. Abre **NuvioTvOG** e inicia sesión con el QR de Nuvio (sus datos son independientes).
@@ -45,7 +46,8 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 - Un búfer grande usa memoria del televisor. Si la app se cierra durante la reproducción, baja la precarga o el búfer hacia atrás.
 - Mismo icono que la app original; solo cambia el nombre.
 - Ambas apps declaran los enlaces `nuvio://` y `stremio://`; Android puede preguntar cuál usar al abrir uno desde otra app.
-- Firma Android Debug generada en el runner: para instalar una versión futura puede ser necesario desinstalar antes NuvioTvOG (nunca la original).
+- La clave de firma solo existe en los secretos del repositorio (y en la copia del propietario). Si se perdiera, la versión siguiente volvería a requerir desinstalar.
+- Experimental: no probado en un televisor físico.
 - Las claves de Trakt, Simkl, MDBList, TMDB y otros servicios del `local.properties` privado de upstream no están en el repositorio. Esas integraciones pueden aparecer sin configurar hasta añadir el secreto `LOCAL_PROPERTIES_BASE64`.
 - AniList guarda progreso acumulado: solo se importa un prefijo de episodios por entrada.
 - Requiere Android System WebView. La verificación Cloudflare de AniList puede necesitar navegar con el mando hasta la casilla.

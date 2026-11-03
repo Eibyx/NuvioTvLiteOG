@@ -25,6 +25,10 @@ on:
         description: Commit to tag instead of the build commit; it may differ from it only under .github/
         type: string
         default: ''
+      prerelease:
+        description: Mark the GitHub release as a pre-release (untick for a normal release)
+        type: boolean
+        default: true
 permissions:
   contents: read
 concurrency:
@@ -36,10 +40,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
-      CI_USE_DEBUG_SIGNING: 'true'
       STANDALONE: ${{ github.event_name == 'workflow_dispatch' && inputs.standalone && 'true' || 'false' }}
       # AGP resolves its debug keystore from ANDROID_USER_HOME first; pin it to the key fingerprinted below.
       ANDROID_USER_HOME: /home/runner/.android
+      # Public certificate of the fixed NuvioTvOG key; its keystore lives only in repository secrets.
+      NUVIOTVOG_SIGNER_SHA256: 09778027af6ff49b4e3393f1e786d8b65040abe25c148c3ed0724c7abfc76ceb
     steps:
       - uses: actions/checkout@v4
         with:
@@ -72,10 +77,33 @@ jobs:
             printf '%s' "$LOCAL_PROPERTIES_BASE64" | base64 --decode > local.properties
           fi
           python3 scripts/anilist/prepare_diagnostic_config.py reference/app-lite-armeabi-v7a-release.apk --output diagnostic-config.json
-      - name: Prepare Android debug signing only
+      - name: Prepare signing (fixed NuvioTvOG key when configured, otherwise Android debug)
         shell: bash
+        env:
+          NUVIOTVOG_KEYSTORE_BASE64: ${{ secrets.NUVIOTVOG_KEYSTORE_BASE64 }}
+          NUVIOTVOG_KEYSTORE_PASSWORD: ${{ secrets.NUVIOTVOG_KEYSTORE_PASSWORD }}
         run: |
           set -euo pipefail
+          if [ "$STANDALONE" = true ] && [ -n "$NUVIOTVOG_KEYSTORE_BASE64" ]; then
+            # Same key for every NuvioTvOG build, so new versions install over the previous one.
+            test -n "$NUVIOTVOG_KEYSTORE_PASSWORD" || { echo 'Missing secret NUVIOTVOG_KEYSTORE_PASSWORD' >&2; exit 1; }
+            umask 077
+            keystore="$RUNNER_TEMP/nuviotvog.p12"
+            printf '%s' "$NUVIOTVOG_KEYSTORE_BASE64" | tr -d ' \t\r\n' | base64 --decode > "$keystore"
+            signer="$(keytool -exportcert -keystore "$keystore" -storepass "$NUVIOTVOG_KEYSTORE_PASSWORD" -alias nuviotvog | sha256sum | cut -d ' ' -f 1)"
+            test "$signer" = "$NUVIOTVOG_SIGNER_SHA256" || { echo 'NUVIOTVOG_KEYSTORE_BASE64 is not the NuvioTvOG key' >&2; exit 1; }
+            {
+              echo "CI_USE_DEBUG_SIGNING=false"
+              echo "SIGNING_KIND=fixed"
+              echo "NUVIO_RELEASE_STORE_FILE=$keystore"
+              echo "NUVIO_RELEASE_KEY_ALIAS=nuviotvog"
+              echo "NUVIO_RELEASE_KEY_PASSWORD=$NUVIOTVOG_KEYSTORE_PASSWORD"
+              echo "NUVIO_RELEASE_STORE_PASSWORD=$NUVIOTVOG_KEYSTORE_PASSWORD"
+              echo "DIAGNOSTIC_SIGNER_SHA256=$signer"
+            } >> "$GITHUB_ENV"
+            exit 0
+          fi
+          { echo "CI_USE_DEBUG_SIGNING=true"; echo "SIGNING_KIND=debug"; } >> "$GITHUB_ENV"
           mkdir -p "$ANDROID_USER_HOME"
           if [ ! -f "$ANDROID_USER_HOME/debug.keystore" ]; then
             keytool -genkeypair -keystore "$ANDROID_USER_HOME/debug.keystore" -storepass android -keypass android -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname 'CN=Android Debug,O=Android,C=US'
@@ -91,6 +119,7 @@ jobs:
         run: >-
           ./gradlew :app:testLiteReleaseUnitTest
           -PanilistArmv7Only=true -PanilistDiagnostic=true -PanilistStandalone=${{ env.STANDALONE }}
+          -PanilistFixedSigning=${{ env.SIGNING_KIND == 'fixed' }}
           -Pkotlin.compiler.execution.strategy=in-process --max-workers=2
           "-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8"
           --stacktrace
@@ -98,6 +127,7 @@ jobs:
         run: >-
           ./gradlew :app:assembleLiteRelease
           -PanilistArmv7Only=true -PanilistDiagnostic=true -PanilistStandalone=${{ env.STANDALONE }}
+          -PanilistFixedSigning=${{ env.SIGNING_KIND == 'fixed' }}
           -Pkotlin.compiler.execution.strategy=in-process --max-workers=2
           "-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8"
           --stacktrace
@@ -111,8 +141,11 @@ jobs:
           test "${#apks[@]}" -eq 1
           mkdir -p delivery
           extra=()
-          if [ "$STANDALONE" = true ]; then
-            apk=delivery/NuvioTvOG-2.3.2-og.2-standalone-debug-signed-armeabi-v7a.apk
+          if [ "$STANDALONE" = true ] && [ "$SIGNING_KIND" = fixed ]; then
+            apk=delivery/NuvioTvOG-2.3.2-og.3-armeabi-v7a.apk
+            extra+=(--standalone --fixed-signing)
+          elif [ "$STANDALONE" = true ]; then
+            apk=delivery/NuvioTvOG-2.3.2-og.3-standalone-debug-signed-armeabi-v7a.apk
             extra+=(--standalone)
           else
             apk=delivery/NuvioTV-Lite-2.3.2-anilist.1-experimental-debug-signed-armeabi-v7a.apk
@@ -141,9 +174,9 @@ jobs:
             diagnostic-config.json
             preservation.json
             app/build/outputs/logs/
-      - name: Remove local configuration and debug key
+      - name: Remove local configuration and signing keys
         if: always()
-        run: rm -f local.properties "$ANDROID_USER_HOME/debug.keystore"
+        run: rm -f local.properties "$ANDROID_USER_HOME/debug.keystore" "$RUNNER_TEMP/nuviotvog.p12"
   prerelease:
     if: >-
       always() && github.event_name == 'workflow_dispatch' && inputs.publish_prerelease &&
@@ -159,6 +192,7 @@ jobs:
       FROM_RUN_ID: ${{ inputs.from_run_id }}
       STANDALONE: ${{ inputs.standalone && 'true' || 'false' }}
       RELEASE_TARGET: ${{ inputs.release_target }}
+      PRERELEASE: ${{ inputs.prerelease && 'true' || 'false' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -188,7 +222,10 @@ jobs:
           notes += f"- Archivo: `{r['apk']}`\n- SHA-256: `{r['sha256']}`\n"
           notes += f"- Package: `{r['package']}` · versionCode {r['version_code']} · versionName `{r['version_name']}`\n"
           notes += f"- ABI: `{r['abi']}` únicamente · bibliotecas nativas precompiladas (MPV, FFmpeg, ExoPlayer, libass) idénticas byte a byte a la release oficial v2.3.1-lite ARMv7; `libdovi_bridge.so` compilada desde las fuentes sin cambios\n"
-          notes += f"- Firma: Android Debug (generada en el runner), certificado SHA-256 `{r['signer_sha256']}`\n"
+          if r.get('signing') == 'fixed':
+              notes += f"- Firma: clave fija de NuvioTvOG, certificado SHA-256 `{r['signer_sha256']}`. Las próximas versiones se instalan encima de esta sin desinstalar.\n"
+          else:
+              notes += f"- Firma: Android Debug (generada en el runner), certificado SHA-256 `{r['signer_sha256']}`\n"
           notes += f"- AniList: Client ID `{r['anilist_client_id']}`, redirect `{r['anilist_redirect_uri']}`\n"
           if standalone:
               c = r['coexistence_with_original']
@@ -211,7 +248,9 @@ jobs:
             echo "APK built from $target; tagging $RELEASE_TARGET (identical outside .github/)"
             target="$RELEASE_TARGET"
           fi
-          if [ "$STANDALONE" = true ]; then
+          if [ "$STANDALONE" = true ] && [ "$PRERELEASE" = false ]; then
+            title="NuvioTvOG ${TAG} (ARMv7)"
+          elif [ "$STANDALONE" = true ]; then
             title="NuvioTvOG — ${TAG} (app independiente, experimental ARMv7, firma debug)"
           else
             title="NuvioTV Lite + AniList — ${TAG} (experimental ARMv7, firma debug)"
@@ -222,13 +261,13 @@ jobs:
             # Never mix builds: refuse a release that already holds a different APK.
             other="$(gh release view "$TAG" --json assets --jq '.assets[].name' | grep '\.apk$' | grep -vxF "$(basename delivery/*.apk)" || true)"
             test -z "$other" || { echo "Release $TAG already contains another APK: $other" >&2; exit 1; }
-            gh release edit "$TAG" --prerelease --draft=false --title "$title" --notes-file delivery/RELEASE_NOTES.md
+            gh release edit "$TAG" --prerelease="$PRERELEASE" --draft=false --title "$title" --notes-file delivery/RELEASE_NOTES.md
             gh release upload "$TAG" --clobber delivery/*.apk delivery/SHA256SUMS.txt
           elif gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --verify-tag --prerelease --title "$title" \
+            gh release create "$TAG" --verify-tag --prerelease="$PRERELEASE" --title "$title" \
               --notes-file delivery/RELEASE_NOTES.md delivery/*.apk delivery/SHA256SUMS.txt
           else
-            gh release create "$TAG" --target "$target" --prerelease --title "$title" \
+            gh release create "$TAG" --target "$target" --prerelease="$PRERELEASE" --title "$title" \
               --notes-file delivery/RELEASE_NOTES.md delivery/*.apk delivery/SHA256SUMS.txt
           fi
           tagged="$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq .sha)"
