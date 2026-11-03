@@ -29,6 +29,14 @@ on:
         description: Mark the GitHub release as a pre-release (untick for a normal release)
         type: boolean
         default: true
+      resigned_apk_ref:
+        description: Branch holding the verified APK re-signed with the fixed NuvioTvOG key (optional)
+        type: string
+        default: ''
+      resigned_apk_path:
+        description: Path of that APK inside the branch
+        type: string
+        default: ''
 permissions:
   contents: read
 concurrency:
@@ -193,6 +201,9 @@ jobs:
       STANDALONE: ${{ inputs.standalone && 'true' || 'false' }}
       RELEASE_TARGET: ${{ inputs.release_target }}
       PRERELEASE: ${{ inputs.prerelease && 'true' || 'false' }}
+      RESIGNED_APK_REF: ${{ inputs.resigned_apk_ref }}
+      RESIGNED_APK_PATH: ${{ inputs.resigned_apk_path }}
+      NUVIOTVOG_SIGNER_SHA256: 09778027af6ff49b4e3393f1e786d8b65040abe25c148c3ed0724c7abfc76ceb
     steps:
       - uses: actions/checkout@v4
         with:
@@ -203,6 +214,43 @@ jobs:
           path: delivery
           run-id: ${{ inputs.from_run_id || github.run_id }}
           github-token: ${{ github.token }}
+      - name: Use the verified APK re-signed with the fixed NuvioTvOG key
+        if: inputs.resigned_apk_ref != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$STANDALONE" = true -a -n "$RESIGNED_APK_PATH"
+          sha256sum -c delivery/SHA256SUMS.txt
+          git fetch --no-tags --depth=1 origin "refs/heads/$RESIGNED_APK_REF"
+          resigned="$RUNNER_TEMP/$(basename "$RESIGNED_APK_PATH")"
+          git cat-file blob "FETCH_HEAD:$RESIGNED_APK_PATH" > "$resigned"
+          verified="$(ls delivery/*.apk)"
+          apksigner="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)"
+          report="$("$apksigner" verify --verbose --print-certs "$resigned")"
+          python3 - "$verified" "$resigned" "$report" <<'PY'
+          import hashlib, json, os, re, sys, zipfile
+          from pathlib import Path
+          verified, resigned, report = sys.argv[1:]
+          def payload(path):
+              with zipfile.ZipFile(path) as z:
+                  assert z.testzip() is None
+                  return {i.filename: hashlib.sha256(z.read(i.filename)).hexdigest()
+                          for i in z.infolist() if not i.filename.startswith('META-INF/')}
+          # Only the signature may differ from the APK this workflow built and verified.
+          assert payload(verified) == payload(resigned), 'Re-signed APK content differs from the verified build'
+          signers = set(re.findall(r'certificate SHA-256 digest:\s*([0-9a-f]{64})', report))
+          assert signers == {os.environ['NUVIOTVOG_SIGNER_SHA256']}, 'Re-signed APK is not signed with the NuvioTvOG key'
+          dn = re.search(r'certificate DN:\s*(.+)', report).group(1)
+          r = json.loads(Path('delivery/apk-verification.json').read_text())
+          r.update(apk=Path(resigned).name, sha256=hashlib.sha256(Path(resigned).read_bytes()).hexdigest(),
+                   signer_sha256=signers.pop(), signer_dn=dn, signing='fixed',
+                   resigned_from_sha256=r['sha256'])
+          Path('delivery/apk-verification.json').write_text(json.dumps(r, indent=2) + '\n')
+          PY
+          rm "$verified"
+          cp "$resigned" delivery/
+          sha256sum "delivery/$(basename "$resigned")" > delivery/SHA256SUMS.txt
+          cat delivery/SHA256SUMS.txt
       - name: Publish experimental pre-release with only the ARMv7 APK
         shell: bash
         run: |
