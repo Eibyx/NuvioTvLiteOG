@@ -2,6 +2,7 @@ package com.nuvio.tv.data.local
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.nuvio.tv.core.profile.ProfileManager
 import com.nuvio.tv.domain.model.AppFont
@@ -34,6 +35,7 @@ class ThemeDataStore @Inject constructor(
     private val amoledModeKey = booleanPreferencesKey("amoled_mode")
     private val amoledSurfacesModeKey = booleanPreferencesKey("amoled_surfaces_mode")
     private val settingsUiStyleKey = stringPreferencesKey("settings_ui_style")
+    private val uiScalePercentKey = intPreferencesKey(UiScale.PREFERENCE_KEY)
 
     val themeSelection: Flow<ThemeSelection> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
@@ -75,6 +77,16 @@ class ThemeDataStore @Inject constructor(
             } catch (e: IllegalArgumentException) {
                 SettingsUiStyle.CLASSIC
             }
+        }
+    }
+
+    val uiScalePercent: Flow<Int> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs -> UiScale.orDefault(prefs[uiScalePercentKey]) }
+    }
+
+    suspend fun setUiScalePercent(percent: Int) {
+        store().edit { prefs ->
+            prefs[uiScalePercentKey] = UiScale.orDefault(percent)
         }
     }
 
@@ -127,4 +139,13 @@ class ThemeDataStore @Inject constructor(
         factory.get(profileId, FEATURE).data.map { prefs ->
             prefs[themeKey]?.let { name -> AppTheme.entries.firstOrNull { it.name == name } }
         }
+}
+
+/** Interface zoom applied to the whole Compose UI. 100 keeps the original layout. */
+object UiScale {
+    const val PREFERENCE_KEY = "ui_scale_percent"
+    const val DEFAULT_PERCENT = 100
+    val OPTIONS_PERCENT = listOf(60, 70, 80, 90, 100, 110, 120)
+
+    fun orDefault(value: Int?): Int = value?.takeIf { it in OPTIONS_PERCENT } ?: DEFAULT_PERCENT
 }

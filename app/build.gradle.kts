@@ -435,7 +435,10 @@ androidComponents {
     if (anilistStandalone) {
         onVariants(selector().withBuildType("release").withFlavor("distribution" to "lite")) { variant ->
             variant.applicationId.set(anilistStandaloneApplicationId)
-            variant.outputs.forEach { it.versionName.set("2.3.2-og.1-standalone-debug-signed") }
+            variant.outputs.forEach {
+                it.versionName.set("2.3.2-og.2-standalone-debug-signed")
+                it.versionCode.set(10025)
+            }
         }
     }
     // Only full and lite ship the in-app updater.

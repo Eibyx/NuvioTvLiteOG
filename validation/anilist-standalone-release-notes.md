@@ -6,6 +6,11 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 ## Novedades
 
+- **Tamaño de la interfaz (zoom):** Ajustes → Apariencia → **Tamaño de la interfaz**: 60 %, 70 %, 80 %, 90 %, **100 % (original)**, 110 % o 120 %.
+  - Escala menús, pósters, textos, iconos y controles del reproductor en la misma proporción; se aplica al momento.
+  - Menos de 100 %: cabe más contenido en pantalla. Más de 100 %: se lee mejor de lejos.
+  - El vídeo y los subtítulos mantienen su propio tamaño. Se guarda solo en este televisor.
+  - Valores bajos muestran más pósters a la vez y usan algo más de memoria en imágenes; en equipos de ~1 GB de RAM conviene no bajar de 80-90 %. A 110-120 % alguna pantalla puede necesitar más desplazamiento.
 - **Nombre y package únicos:** NuvioTvOG / `com.eibyx.nuviotvog` en todos los idiomas. Sustituye a «NuvioTV AniList» (`com.eibyx.nuviotv.anilist`). Al ser otro package, se instala como app nueva: si tenías NuvioTV AniList puedes desinstalarla.
 - **Búfer de MPV ajustable:** Ajustes → Reproducción → Vídeo → **Búfer de MPV** (visible cuando el motor es MPV).
   - **Precarga hacia delante:** 32, 64, 128, 256, 384, 512, 768 o 1024 MB.
@@ -26,6 +31,8 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 - Sin actualizador integrado: el de Lite instalaría el APK oficial `com.nuvio.tv.lite` sobre la app original. Las nuevas versiones de NuvioTvOG se instalan a mano.
 
 ## Instalación
+
+> Esta versión tiene otra firma debug que la anterior de NuvioTvOG: si ya tenías NuvioTvOG instalada, desinstálala antes (se pierde su sesión y sus ajustes). NuvioTV-Lite original no se toca.
 
 1. Instala el APK en el TCL. Android lo trata como una aplicación distinta: no pide desinstalar NuvioTV-Lite y no toca sus datos.
 2. Abre **NuvioTvOG** e inicia sesión con el QR de Nuvio (sus datos son independientes).

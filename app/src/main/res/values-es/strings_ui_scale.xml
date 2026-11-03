@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_ui_scale">Tamaño de la interfaz</string>
+    <string name="appearance_ui_scale_subtitle">Zoom de menús, pósters, textos y controles del reproductor</string>
+    <string name="appearance_ui_scale_value">%1$d%%</string>
+    <string name="appearance_ui_scale_default">Predeterminado</string>
+    <string name="appearance_ui_scale_smaller">Más pequeño: cabe más contenido en pantalla</string>
+    <string name="appearance_ui_scale_larger">Más grande: se lee mejor de lejos</string>
+    <string name="appearance_ui_scale_dialog_subtitle">Se aplica al momento en toda la app y solo en este dispositivo. El vídeo y los subtítulos mantienen su propio tamaño.</string>
+</resources>

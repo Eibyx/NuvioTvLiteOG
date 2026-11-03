@@ -27,6 +27,16 @@ MPV_CACHE_SETTING = {
     'app/src/main/java/com/nuvio/tv/ui/screens/settings/PlaybackVideoSettings.kt',
 }
 ALLOWED |= MPV_CACHE_SETTING
+# Owner-requested interface zoom (Ajustes > Apariencia > Tamaño de la interfaz, 60-120 %).
+# ProfileSettingsSyncService (listed above) also keeps this value on the device.
+UI_SCALE_SETTING = {
+    'app/src/main/java/com/nuvio/tv/MainActivity.kt',
+    'app/src/main/java/com/nuvio/tv/data/local/ThemeDataStore.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/settings/ThemeSettingsScreen.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/settings/ThemeSettingsViewModel.kt',
+    'app/src/test/java/com/nuvio/tv/ui/screens/settings/ThemeSettingsViewModelTest.kt',
+}
+ALLOWED |= UI_SCALE_SETTING
 PROTECTED = [
     'app/src/main/java/com/nuvio/tv/core/auth/AuthManager.kt',
     'app/src/main/java/com/nuvio/tv/core/di/SupabaseModule.kt',
@@ -58,7 +68,8 @@ def verify(ref=None):
     return {'upstream_commit':UPSTREAM,'original_entries':len(original),'identical':len(identical),
         'modified_original_files':changed,'qr_auth_supabase_original':True,
         'player_native_addons_themes_original':True,
-        'mpv_cache_setting_files':sorted(set(changed) & MPV_CACHE_SETTING)}
+        'mpv_cache_setting_files':sorted(set(changed) & MPV_CACHE_SETTING),
+        'ui_scale_setting_files':sorted(set(changed) & UI_SCALE_SETTING)}
 
 if __name__ == '__main__':
     p=argparse.ArgumentParser(); p.add_argument('--ref'); p.add_argument('--output'); args=p.parse_args()

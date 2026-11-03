@@ -90,6 +90,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -156,6 +157,7 @@ import com.nuvio.tv.data.local.ExperienceModeDataStore
 import com.nuvio.tv.data.local.LayoutPreferenceDataStore
 import com.nuvio.tv.data.local.StartupAuthNotice
 import com.nuvio.tv.data.local.ThemeDataStore
+import com.nuvio.tv.data.local.UiScale
 import com.nuvio.tv.data.repository.MemberAccessRepository
 import com.nuvio.tv.data.remote.supabase.AvatarRepository
 import com.nuvio.tv.domain.model.AppFont
@@ -212,6 +214,7 @@ import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import java.util.Locale
 import javax.inject.Inject
+import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -233,6 +236,17 @@ val LocalSplashBackground = compositionLocalOf { SplashBackground() }
 private const val SIDEBAR_AUTO_COLLAPSE_DELAY_MS = 3_000L
 
 private const val MAX_SUPPORTED_FONT_SCALE = 1.15f
+
+/** Copy of [base] whose dp dimensions match a UI drawn at [scale] times the system density. */
+internal fun scaleConfigurationForUi(base: Configuration, scale: Float): Configuration {
+    if (scale == 1f) return base
+    return Configuration(base).apply {
+        screenWidthDp = (base.screenWidthDp / scale).roundToInt()
+        screenHeightDp = (base.screenHeightDp / scale).roundToInt()
+        smallestScreenWidthDp = (base.smallestScreenWidthDp / scale).roundToInt()
+        densityDpi = (base.densityDpi * scale).roundToInt()
+    }
+}
 
 data class DrawerItem(
     val route: String,
@@ -262,7 +276,8 @@ private data class MainUiPrefs(
     val settingsUiStyle: SettingsUiStyle = SettingsUiStyle.CLASSIC,
     val cardDepthStyle: CardDepthStyle = CardDepthStyle(),
     val landscapePosterMode: Boolean = false,
-    val alwaysBackdropWithLogo: Boolean = false
+    val alwaysBackdropWithLogo: Boolean = false,
+    val uiScalePercent: Int = UiScale.DEFAULT_PERCENT
 )
 
 @AndroidEntryPoint
@@ -567,8 +582,9 @@ open class MainActivity : ComponentActivity() {
                 }
                 val landscapePrefsFlow = combine(
                     layoutPreferenceDataStore.modernLandscapePostersEnabled,
-                    layoutPreferenceDataStore.alwaysShowLandscapeClearlogo
-                ) { landscape, backdropWithLogo -> landscape to backdropWithLogo }
+                    layoutPreferenceDataStore.alwaysShowLandscapeClearlogo,
+                    themeDataStore.uiScalePercent
+                ) { landscape, backdropWithLogo, uiScalePercent -> Triple(landscape, backdropWithLogo, uiScalePercent) }
 
                 combine(
                     themeAndExperienceFlow,
@@ -576,7 +592,7 @@ open class MainActivity : ComponentActivity() {
                     extraFeaturesFlow,
                     layoutPreferenceDataStore.cardDepthStyle,
                     landscapePrefsFlow
-                ) { themePrefs, layoutPrefs, extraPrefs, cardDepthStyle, (landscapePosterMode, alwaysBackdropWithLogo) ->
+                ) { themePrefs, layoutPrefs, extraPrefs, cardDepthStyle, (landscapePosterMode, alwaysBackdropWithLogo, uiScalePercent) ->
                     themePrefs.copy(
                         hasChosenLayout = layoutPrefs.hasChosenLayout,
                         sidebarCollapsed = layoutPrefs.sidebarCollapsed,
@@ -590,7 +606,8 @@ open class MainActivity : ComponentActivity() {
                         settingsUiStyle = extraPrefs.settingsUiStyle,
                         cardDepthStyle = cardDepthStyle,
                         landscapePosterMode = landscapePosterMode,
-                        alwaysBackdropWithLogo = alwaysBackdropWithLogo
+                        alwaysBackdropWithLogo = alwaysBackdropWithLogo,
+                        uiScalePercent = uiScalePercent
                     )
                 }
             }
@@ -619,11 +636,18 @@ open class MainActivity : ComponentActivity() {
                     defaultBringIntoViewSpec
                 }
                 val systemDensity = LocalDensity.current
-                val clampedFontScaleDensity = remember(systemDensity) {
+                val systemConfiguration = LocalConfiguration.current
+                val uiScale = mainUiPrefs.uiScalePercent / 100f
+                val clampedFontScaleDensity = remember(systemDensity, uiScale) {
                     Density(
-                        density = systemDensity.density,
+                        density = systemDensity.density * uiScale,
                         fontScale = systemDensity.fontScale.coerceAtMost(MAX_SUPPORTED_FONT_SCALE)
                     )
+                }
+                // Screens size themselves from screenWidthDp/screenHeightDp; scale those with the
+                // density so dp * density still equals the physical screen.
+                val uiScaledConfiguration = remember(systemConfiguration, uiScale) {
+                    scaleConfigurationForUi(systemConfiguration, uiScale)
                 }
                 val highlighterEnabled = BuildConfig.IS_DEBUG_BUILD && mainUiPrefs.composeHighlighterEnabled
                 com.nuvio.tv.ui.util.RecompositionHighlighterFlag.enabled = highlighterEnabled
@@ -704,6 +728,7 @@ open class MainActivity : ComponentActivity() {
                 }
                 CompositionLocalProvider(
                     LocalDensity provides clampedFontScaleDensity,
+                    LocalConfiguration provides uiScaledConfiguration,
                     LocalBringIntoViewSpec provides bringIntoViewSpec,
                     LocalFastHorizontalNavigationEnabled provides mainUiPrefs.fastHorizontalNavigationEnabled,
                     LocalRecompositionHighlighterEnabled provides highlighterEnabled,

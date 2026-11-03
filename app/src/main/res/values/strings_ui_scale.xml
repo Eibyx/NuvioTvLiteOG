@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_ui_scale">Interface size</string>
+    <string name="appearance_ui_scale_subtitle">Zoom menus, posters, text and player controls</string>
+    <string name="appearance_ui_scale_value">%1$d%%</string>
+    <string name="appearance_ui_scale_default">Default</string>
+    <string name="appearance_ui_scale_smaller">Smaller: more content fits on screen</string>
+    <string name="appearance_ui_scale_larger">Larger: easier to read from a distance</string>
+    <string name="appearance_ui_scale_dialog_subtitle">Applies right away to the whole app on this device. Video and subtitles keep their own size.</string>
+</resources>

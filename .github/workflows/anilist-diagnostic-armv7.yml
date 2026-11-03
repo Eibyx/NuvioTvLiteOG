@@ -21,6 +21,10 @@ on:
         description: Build NuvioTvOG (com.eibyx.nuviotvog), which installs beside the original Lite
         type: boolean
         default: false
+      release_target:
+        description: Commit to tag instead of the build commit; it may differ from it only under .github/
+        type: string
+        default: ''
 permissions:
   contents: read
 concurrency:
@@ -108,7 +112,7 @@ jobs:
           mkdir -p delivery
           extra=()
           if [ "$STANDALONE" = true ]; then
-            apk=delivery/NuvioTvOG-2.3.2-og.1-standalone-debug-signed-armeabi-v7a.apk
+            apk=delivery/NuvioTvOG-2.3.2-og.2-standalone-debug-signed-armeabi-v7a.apk
             extra+=(--standalone)
           else
             apk=delivery/NuvioTV-Lite-2.3.2-anilist.1-experimental-debug-signed-armeabi-v7a.apk
@@ -154,8 +158,11 @@ jobs:
       TAG: ${{ inputs.tag }}
       FROM_RUN_ID: ${{ inputs.from_run_id }}
       STANDALONE: ${{ inputs.standalone && 'true' || 'false' }}
+      RELEASE_TARGET: ${{ inputs.release_target }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.standalone && 'NuvioTvOG-ARMv7-DEBUG-SIGNED' || 'NuvioTV-Lite-ARMv7-EXPERIMENTAL-DEBUG-SIGNED' }}
@@ -194,6 +201,16 @@ jobs:
           if [ -n "$FROM_RUN_ID" ]; then
             target="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$FROM_RUN_ID" --jq .head_sha)"
           fi
+          # GITHUB_TOKEN may not create a tag on a commit that changes CI files. A release source
+          # commit may restore .github/ from dev, but must carry exactly the build's other files.
+          built="$target"
+          if [ -n "$RELEASE_TARGET" ]; then
+            git cat-file -e "$RELEASE_TARGET^{commit}"
+            outside="$(git diff --name-only "$target" "$RELEASE_TARGET" -- . ':(exclude).github')"
+            test -z "$outside" || { echo "Release target differs from the build outside .github/: $outside" >&2; exit 1; }
+            echo "APK built from $target; tagging $RELEASE_TARGET (identical outside .github/)"
+            target="$RELEASE_TARGET"
+          fi
           if [ "$STANDALONE" = true ]; then
             title="NuvioTvOG — ${TAG} (app independiente, experimental ARMv7, firma debug)"
           else
@@ -215,4 +232,4 @@ jobs:
               --notes-file delivery/RELEASE_NOTES.md delivery/*.apk delivery/SHA256SUMS.txt
           fi
           tagged="$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq .sha)"
-          echo "Release $TAG points at $tagged (APK built from $target)"
+          echo "Release $TAG points at $tagged (APK built from $built)"

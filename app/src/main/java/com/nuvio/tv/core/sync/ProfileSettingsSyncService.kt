@@ -20,6 +20,7 @@ import com.nuvio.tv.data.local.PluginDataStore
 import com.nuvio.tv.data.local.ProfileDataStoreFactory
 import com.nuvio.tv.data.local.StreamBadgeSettingsDataStore
 import com.nuvio.tv.data.local.TmdbSettingsDataStore
+import com.nuvio.tv.data.local.UiScale
 import com.nuvio.tv.data.remote.supabase.SupabaseProfileSetupCopyResult
 import com.nuvio.tv.data.remote.supabase.SupabaseProfileSettingsBlob
 import com.nuvio.tv.domain.model.DiscoverLocation
@@ -170,6 +171,8 @@ internal fun shouldExcludePreferenceFromProfileSettingsSync(feature: String, key
         feature == "layout_settings" && keyName == "search_discover_enabled" -> true
         feature == PLAYER_SETTINGS_FEATURE && keyName in localOnlyPlayerProfileSettingsKeys -> true
         feature == "trailer_settings" && keyName in localOnlyTrailerProfileSettingsKeys -> true
+        // Interface zoom depends on this screen and its distance, so it stays on the device.
+        feature == "theme_settings" && keyName == UiScale.PREFERENCE_KEY -> true
         feature == PluginDataStore.FEATURE && keyName != PluginDataStore.GROUP_STREAMS_BY_REPOSITORY -> true
         keyName in credentialProfileSettingsKeys[feature].orEmpty() -> true
         else -> false
@@ -696,6 +699,7 @@ class ProfileSettingsSyncService @Inject constructor(
             "layout_settings" -> catalogKeysExcludedFromProfileSettingsBlob + localOnlyLayoutProfileSettingsKeys
             PLAYER_SETTINGS_FEATURE -> localOnlyPlayerProfileSettingsKeys
             "trailer_settings" -> localOnlyTrailerProfileSettingsKeys
+            "theme_settings" -> setOf(UiScale.PREFERENCE_KEY)
             else -> credentialProfileSettingsKeys[feature].orEmpty()
         }
         if (keyNames.isEmpty()) return emptyMap()

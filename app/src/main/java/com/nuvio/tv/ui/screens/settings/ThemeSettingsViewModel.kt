@@ -3,6 +3,7 @@ package com.nuvio.tv.ui.screens.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nuvio.tv.data.local.ThemeDataStore
+import com.nuvio.tv.data.local.UiScale
 import com.nuvio.tv.data.repository.MemberAccessRepository
 import com.nuvio.tv.domain.model.AppFont
 import com.nuvio.tv.domain.model.AppIconOption
@@ -36,7 +37,8 @@ data class ThemeSettingsUiState(
     val amoledMode: Boolean = false,
     val amoledSurfacesMode: Boolean = false,
     val settingsUiStyle: SettingsUiStyle = SettingsUiStyle.CLASSIC,
-    val availableSettingsUiStyles: List<SettingsUiStyle> = SettingsUiStyle.entries.toList()
+    val availableSettingsUiStyles: List<SettingsUiStyle> = SettingsUiStyle.entries.toList(),
+    val uiScalePercent: Int = UiScale.DEFAULT_PERCENT
 )
 
 sealed class ThemeSettingsEvent {
@@ -46,6 +48,7 @@ sealed class ThemeSettingsEvent {
     data class ToggleAmoledMode(val enabled: Boolean) : ThemeSettingsEvent()
     data class ToggleAmoledSurfacesMode(val enabled: Boolean) : ThemeSettingsEvent()
     data class SelectSettingsUiStyle(val style: SettingsUiStyle) : ThemeSettingsEvent()
+    data class SelectUiScale(val percent: Int) : ThemeSettingsEvent()
     data object DismissAppIconFailure : ThemeSettingsEvent()
 }
 
@@ -133,6 +136,15 @@ class ThemeSettingsViewModel @Inject constructor(
                     }
                 }
         }
+        viewModelScope.launch {
+            themeDataStore.uiScalePercent
+                .distinctUntilChanged()
+                .collectLatest { percent ->
+                    _uiState.update { state ->
+                        if (state.uiScalePercent == percent) state else state.copy(uiScalePercent = percent)
+                    }
+                }
+        }
     }
 
     private fun currentTheme(): AppTheme {
@@ -147,6 +159,7 @@ class ThemeSettingsViewModel @Inject constructor(
             is ThemeSettingsEvent.ToggleAmoledMode -> setAmoledMode(event.enabled)
             is ThemeSettingsEvent.ToggleAmoledSurfacesMode -> setAmoledSurfacesMode(event.enabled)
             is ThemeSettingsEvent.SelectSettingsUiStyle -> selectSettingsUiStyle(event.style)
+            is ThemeSettingsEvent.SelectUiScale -> selectUiScale(event.percent)
             ThemeSettingsEvent.DismissAppIconFailure -> appIconManager.clearFailure()
         }
     }
@@ -166,6 +179,13 @@ class ThemeSettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val access = memberAccessRepository.access.value
             themeDataStore.setCustomTheme(resolveCustomThemeColors(colors, access.tier))
+        }
+    }
+
+    private fun selectUiScale(percent: Int) {
+        if (_uiState.value.uiScalePercent == percent) return
+        viewModelScope.launch {
+            themeDataStore.setUiScalePercent(percent)
         }
     }
 

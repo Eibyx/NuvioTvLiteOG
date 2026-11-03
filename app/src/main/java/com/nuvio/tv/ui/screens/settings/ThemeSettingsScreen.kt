@@ -68,6 +68,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.nuvio.tv.LocaleCache
 import com.nuvio.tv.R
+import com.nuvio.tv.data.local.UiScale
 import com.nuvio.tv.domain.model.AppIconOption
 import com.nuvio.tv.domain.model.AppTheme
 import com.nuvio.tv.domain.model.CustomThemeColors
@@ -103,6 +104,7 @@ fun ThemeSettingsContent(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val appIconState by viewModel.appIconState.collectAsStateWithLifecycle()
     var showFontDialog by remember { mutableStateOf(false) }
+    var showUiScaleDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showAppIconDialog by remember { mutableStateOf(false) }
     var showCustomThemeDialog by remember(uiState.customThemeGradientEnabled) { mutableStateOf(false) }
@@ -321,6 +323,12 @@ fun ThemeSettingsContent(
                     onClick = { showFontDialog = true }
                 )
                 SettingsActionRow(
+                    title = stringResource(R.string.appearance_ui_scale),
+                    subtitle = stringResource(R.string.appearance_ui_scale_subtitle),
+                    value = stringResource(R.string.appearance_ui_scale_value, uiState.uiScalePercent),
+                    onClick = { showUiScaleDialog = true }
+                )
+                SettingsActionRow(
                     title = stringResource(R.string.appearance_language),
                     subtitle = stringResource(R.string.appearance_language_subtitle),
                     value = currentLocaleName,
@@ -340,6 +348,35 @@ fun ThemeSettingsContent(
                 showCustomThemeDialog = false
             },
             onDismiss = { showCustomThemeDialog = false }
+        )
+    }
+
+    if (showUiScaleDialog) {
+        val defaultLabel = stringResource(R.string.appearance_ui_scale_default)
+        val smallerLabel = stringResource(R.string.appearance_ui_scale_smaller)
+        val largerLabel = stringResource(R.string.appearance_ui_scale_larger)
+        SettingsSingleChoiceDialog(
+            title = stringResource(R.string.appearance_ui_scale),
+            subtitle = stringResource(R.string.appearance_ui_scale_dialog_subtitle),
+            options = UiScale.OPTIONS_PERCENT.map { percent ->
+                SettingsPickerOption(
+                    value = percent,
+                    title = stringResource(R.string.appearance_ui_scale_value, percent),
+                    description = when {
+                        percent == UiScale.DEFAULT_PERCENT -> defaultLabel
+                        percent < UiScale.DEFAULT_PERCENT -> smallerLabel
+                        else -> largerLabel
+                    }
+                )
+            },
+            selectedValue = uiState.uiScalePercent,
+            onOptionSelected = { percent ->
+                viewModel.onEvent(ThemeSettingsEvent.SelectUiScale(percent))
+                showUiScaleDialog = false
+            },
+            onDismiss = { showUiScaleDialog = false },
+            width = 440.dp,
+            maxHeight = 400.dp
         )
     }
 
