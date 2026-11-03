@@ -150,10 +150,10 @@ jobs:
           mkdir -p delivery
           extra=()
           if [ "$STANDALONE" = true ] && [ "$SIGNING_KIND" = fixed ]; then
-            apk=delivery/NuvioTvOG-2.3.2-og.3-armeabi-v7a.apk
+            apk=delivery/NuvioTvOG-0.5.0-armeabi-v7a.apk
             extra+=(--standalone --fixed-signing)
           elif [ "$STANDALONE" = true ]; then
-            apk=delivery/NuvioTvOG-2.3.2-og.3-standalone-debug-signed-armeabi-v7a.apk
+            apk=delivery/NuvioTvOG-0.5.0-debug-signed-armeabi-v7a.apk
             extra+=(--standalone)
           else
             apk=delivery/NuvioTV-Lite-2.3.2-anilist.1-experimental-debug-signed-armeabi-v7a.apk

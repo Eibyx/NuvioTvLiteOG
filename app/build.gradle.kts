@@ -116,6 +116,8 @@ val anilistStandalone = providers.gradleProperty("anilistStandalone").orNull == 
 val anilistStandaloneApplicationId = "com.eibyx.nuviotvog"
 // Set by CI when NuvioTvOG is signed with its fixed key instead of a per-run Android debug key.
 val anilistFixedSigning = providers.gradleProperty("anilistFixedSigning").orNull == "true"
+// NuvioTvOG's own version, matching its GitHub release tags (vX.Y.Z-nuviotvog); not Lite's numbering.
+val nuvioTvOgVersionName = "0.5.0"
 val useLocalFfmpegDecoder = truthy(
     providers.gradleProperty("useLocalFfmpegDecoder").orNull
         ?: env("USE_LOCAL_FFMPEG_DECODER")
@@ -438,7 +440,7 @@ androidComponents {
         onVariants(selector().withBuildType("release").withFlavor("distribution" to "lite")) { variant ->
             variant.applicationId.set(anilistStandaloneApplicationId)
             variant.outputs.forEach {
-                it.versionName.set(if (anilistFixedSigning) "2.3.2-og.3" else "2.3.2-og.3-standalone-debug-signed")
+                it.versionName.set(if (anilistFixedSigning) nuvioTvOgVersionName else "$nuvioTvOgVersionName-debug-signed")
                 it.versionCode.set(10026)
             }
         }

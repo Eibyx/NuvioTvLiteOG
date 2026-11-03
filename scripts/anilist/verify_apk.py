@@ -93,7 +93,7 @@ def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=No
         else:
             assert 'CN=Android Debug' in dn and 'O=Android' in dn, 'Diagnostic APK must use an Android debug certificate'
             assert expected, 'Supply the generated debug certificate fingerprint'
-            label = 'standalone-debug-signed' if standalone else 'diagnostic-debug-signed'
+            label = 'debug-signed' if standalone else 'diagnostic-debug-signed'
             assert label in package[3], 'Debug-signed version label missing'
         assert native_match, 'A diagnostic APK requires the original native reference'
         assert (values.get('ANILIST_CLIENT_ID'), values.get('ANILIST_REDIRECT_URI')) == MOBILE_CLIENT, 'Debug-signed delivery reuses only the NuvioMobileKai AniList client'
