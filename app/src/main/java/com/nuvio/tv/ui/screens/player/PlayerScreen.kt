@@ -1011,6 +1011,20 @@ fun PlayerScreen(
                             }
                             true
                         }
+                        in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9,
+                        in KeyEvent.KEYCODE_NUMPAD_0..KeyEvent.KEYCODE_NUMPAD_9 -> {
+                            val timeline = viewModel.playbackTimeline.value
+                            val target = PlayerNumberKeyJump.targetPositionMs(
+                                keyCode = keyEvent.nativeKeyEvent.keyCode,
+                                durationMs = timeline.duration,
+                                isLive = timeline.isLive
+                            )
+                            // One jump per press: a held number key does not keep seeking.
+                            if (target != null && keyEvent.nativeKeyEvent.repeatCount == 0) {
+                                viewModel.onEvent(PlayerEvent.OnSeekTo(target))
+                            }
+                            target != null
+                        }
                         else -> false
                     }
                 } else false

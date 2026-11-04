@@ -28,7 +28,7 @@ def tool(name):
 
 
 def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=None, reference=None, standalone=False,
-            fixed_signing=False):
+            fixed_signing=False, pending_resign=False):
     validate(values, require_anilist=not diagnostic)
     path = Path(apk)
     native = native_payload(path)
@@ -93,8 +93,13 @@ def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=No
         else:
             assert 'CN=Android Debug' in dn and 'O=Android' in dn, 'Diagnostic APK must use an Android debug certificate'
             assert expected, 'Supply the generated debug certificate fingerprint'
-            label = 'debug-signed' if standalone else 'diagnostic-debug-signed'
-            assert label in package[3], 'Debug-signed version label missing'
+            if pending_resign:
+                # Carries the final label; publishing only accepts it re-signed with the fixed key.
+                assert standalone, 'Only NuvioTvOG is re-signed after the build'
+                assert 'debug-signed' not in package[3], 'APK awaiting the fixed key must carry its final label'
+            else:
+                label = 'debug-signed' if standalone else 'diagnostic-debug-signed'
+                assert label in package[3], 'Debug-signed version label missing'
         assert native_match, 'A diagnostic APK requires the original native reference'
         assert (values.get('ANILIST_CLIENT_ID'), values.get('ANILIST_REDIRECT_URI')) == MOBILE_CLIENT, 'Debug-signed delivery reuses only the NuvioMobileKai AniList client'
         assert build_config, 'BuildConfig evidence required for the AniList configuration'
@@ -105,7 +110,8 @@ def inspect(apk, values, expected_signer=None, diagnostic=False, build_config=No
     return {'apk': path.name, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(), 'package': package[1],
             'version_code': int(package[2]), 'version_name': package[3], 'abi': 'armeabi-v7a',
             'signer_sha256': signer, 'signer_dn': dn,
-            'signing': 'fixed' if fixed_signing else ('android_debug' if diagnostic else 'configured'),
+            'signing': 'fixed' if fixed_signing else (
+                'android_debug_pending_resign' if pending_resign else ('android_debug' if diagnostic else 'configured')),
             'update_certificate_verified': bool(expected) and not diagnostic,
             'official_reference_signer_sha256': reference_signer,
             'can_update_official_reference_certificate': signer == reference_signer if reference_signer else None,
@@ -128,9 +134,11 @@ if __name__ == '__main__':
     parser.add_argument('--reference-apk')
     parser.add_argument('--standalone', action='store_true')
     parser.add_argument('--fixed-signing', action='store_true')
+    parser.add_argument('--pending-resign', action='store_true')
     args = parser.parse_args()
     result = inspect(args.apk, properties(args.properties), args.expected_signer, args.diagnostic,
-                     args.build_config, args.reference_apk, args.standalone, args.fixed_signing)
+                     args.build_config, args.reference_apk, args.standalone, args.fixed_signing,
+                     args.pending_resign)
     if args.standalone:
         assert args.reference_apk, 'Coexistence is checked against the original Lite APK'
         result['coexistence_with_original'] = check_coexistence(tool('aapt'), args.apk, args.reference_apk)

@@ -87,6 +87,11 @@ UPSTREAM_NUVIOTV_PICKS = {
     'app/src/test/java/com/nuvio/tv/ui/screens/player/NightModeAudioProcessorTest.kt',
 }
 ALLOWED |= UPSTREAM_NUVIOTV_PICKS
+# Light feature adapted from Nuvio Arc (ysosrs123/NuvioTV-Fork, GPL-3.0): number keys jump to 0-90 %.
+ARC_NUMBER_KEY_JUMP = {
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerScreen.kt',
+}
+ALLOWED |= ARC_NUMBER_KEY_JUMP
 PROTECTED = [
     'app/src/main/java/com/nuvio/tv/core/auth/AuthManager.kt',
     'app/src/main/java/com/nuvio/tv/core/di/SupabaseModule.kt',

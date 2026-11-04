@@ -25,6 +25,10 @@ on:
         description: Commit to tag instead of the build commit; it may differ from it only under .github/
         type: string
         default: ''
+      resign_after_build:
+        description: NuvioTvOG gets its fixed signature outside CI (version label without debug-signed)
+        type: boolean
+        default: false
       prerelease:
         description: Mark the GitHub release as a pre-release (untick for a normal release)
         type: boolean
@@ -49,6 +53,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       STANDALONE: ${{ github.event_name == 'workflow_dispatch' && inputs.standalone && 'true' || 'false' }}
+      RESIGN_AFTER_BUILD: ${{ github.event_name == 'workflow_dispatch' && inputs.resign_after_build && 'true' || 'false' }}
       # AGP resolves its debug keystore from ANDROID_USER_HOME first; pin it to the key fingerprinted below.
       ANDROID_USER_HOME: /home/runner/.android
       # Public certificate of the fixed NuvioTvOG key; its keystore lives only in repository secrets.
@@ -127,7 +132,7 @@ jobs:
         run: >-
           ./gradlew :app:testLiteReleaseUnitTest
           -PanilistArmv7Only=true -PanilistDiagnostic=true -PanilistStandalone=${{ env.STANDALONE }}
-          -PanilistFixedSigning=${{ env.SIGNING_KIND == 'fixed' }}
+          -PanilistFixedSigning=${{ env.SIGNING_KIND == 'fixed' || env.RESIGN_AFTER_BUILD == 'true' }}
           -Pkotlin.compiler.execution.strategy=in-process --max-workers=2
           "-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8"
           --stacktrace
@@ -135,7 +140,7 @@ jobs:
         run: >-
           ./gradlew :app:assembleLiteRelease
           -PanilistArmv7Only=true -PanilistDiagnostic=true -PanilistStandalone=${{ env.STANDALONE }}
-          -PanilistFixedSigning=${{ env.SIGNING_KIND == 'fixed' }}
+          -PanilistFixedSigning=${{ env.SIGNING_KIND == 'fixed' || env.RESIGN_AFTER_BUILD == 'true' }}
           -Pkotlin.compiler.execution.strategy=in-process --max-workers=2
           "-Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8"
           --stacktrace
@@ -152,6 +157,10 @@ jobs:
           if [ "$STANDALONE" = true ] && [ "$SIGNING_KIND" = fixed ]; then
             apk=delivery/NuvioTvOG-0.5.0-armeabi-v7a.apk
             extra+=(--standalone --fixed-signing)
+          elif [ "$STANDALONE" = true ] && [ "$RESIGN_AFTER_BUILD" = true ]; then
+            # Debug-signed here only until the fixed NuvioTvOG key replaces the signature.
+            apk=delivery/NuvioTvOG-0.5.0-armeabi-v7a.apk
+            extra+=(--standalone --pending-resign)
           elif [ "$STANDALONE" = true ]; then
             apk=delivery/NuvioTvOG-0.5.0-debug-signed-armeabi-v7a.apk
             extra+=(--standalone)
