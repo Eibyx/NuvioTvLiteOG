@@ -73,7 +73,7 @@ jobs:
       - name: Download pinned official Lite ARMv7 reference
         run: |
           mkdir -p reference
-          gh release download v2.3.1-lite --repo hackerslash/NuvioTV-Lite --pattern app-lite-armeabi-v7a-release.apk --dir reference
+          gh release download v2.4.0-lite --repo hackerslash/NuvioTV-Lite --pattern app-lite-armeabi-v7a-release.apk --dir reference
       - name: Restore public configuration through the upstream mechanism
         env:
           LOCAL_PROPERTIES_BASE64: ${{ secrets.LOCAL_PROPERTIES_BASE64 }}
@@ -269,7 +269,7 @@ jobs:
           notes += '\n## Verificación de este APK\n\n'
           notes += f"- Archivo: `{r['apk']}`\n- SHA-256: `{r['sha256']}`\n"
           notes += f"- Package: `{r['package']}` · versionCode {r['version_code']} · versionName `{r['version_name']}`\n"
-          notes += f"- ABI: `{r['abi']}` únicamente · bibliotecas nativas precompiladas (MPV, FFmpeg, ExoPlayer, libass) idénticas byte a byte a la release oficial v2.3.1-lite ARMv7; `libdovi_bridge.so` compilada desde las fuentes sin cambios\n"
+          notes += f"- ABI: `{r['abi']}` únicamente · bibliotecas nativas precompiladas (MPV, FFmpeg, ExoPlayer, libass) idénticas byte a byte a la release oficial v2.4.0-lite ARMv7; `libdovi_bridge.so` compilada desde las fuentes sin cambios\n"
           if r.get('signing') == 'fixed':
               notes += f"- Firma: clave fija de NuvioTvOG, certificado SHA-256 `{r['signer_sha256']}`. Las próximas versiones se instalan encima de esta sin desinstalar.\n"
           else:
@@ -277,7 +277,7 @@ jobs:
           notes += f"- AniList: Client ID `{r['anilist_client_id']}`, redirect `{r['anilist_redirect_uri']}`\n"
           if standalone:
               c = r['coexistence_with_original']
-              notes += f"- Coexistencia con `{c['original_package']}` (APK oficial v2.3.1-lite): sin conflictos de package, authorities ({', '.join(c['standalone_authorities'])}) ni permisos personalizados; sin sharedUserId; sin actualizador integrado\n"
+              notes += f"- Coexistencia con `{c['original_package']}` (APK oficial v2.4.0-lite): sin conflictos de package, authorities ({', '.join(c['standalone_authorities'])}) ni permisos personalizados; sin sharedUserId; sin actualizador integrado\n"
               notes += f"- Nombre visible: `{c['launcher_label']}`\n"
           Path('delivery/RELEASE_NOTES.md').write_text(notes)
           PY

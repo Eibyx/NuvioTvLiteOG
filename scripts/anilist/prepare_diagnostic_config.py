@@ -13,7 +13,7 @@ from apk_inspection import certificate_sha256, dex_strings
 from verify_apk import tool
 from verify_release_config import MOBILE_CLIENT, properties, validate
 
-REFERENCE_SHA256 = '9ed2b43973714e8d98bb1aa076a306c2ec0faf85480df4124f0ab742271babe1'
+REFERENCE_SHA256 = '7a24b09f2dfe69f08ed8d04d4cb87a14a4039d0b9f4b0461839b5b9677de1953'
 REFERENCE_SIGNER = '7ce8717c8a2610ddc6c3729abc42a8a6a5f571d3b44b39b2f78b7f8083da2662'
 PRIMARY = 'https://api.nuvio.tv'
 FALLBACK = 'https://api-two.nuvioapp.space'
@@ -68,7 +68,7 @@ def prepare(apk, output, report_path, online=True):
     output.write_text('\n'.join(lines) + '\n')
     output.chmod(0o600)
     check = validate(properties(output), online=online)
-    report = {'reference_release': 'v2.3.1-lite', 'reference_apk_sha256': REFERENCE_SHA256,
+    report = {'reference_release': 'v2.4.0-lite', 'reference_apk_sha256': REFERENCE_SHA256,
               'reference_signer_sha256': signer, 'supabase_public_role': 'anon',
               'supabase_primary': PRIMARY, 'supabase_fallback_preserved': FALLBACK,
               'supabase_settings_http': check['supabase_settings_http'],

@@ -3,7 +3,7 @@
 import argparse, hashlib, json, subprocess
 from pathlib import Path
 
-UPSTREAM = '9bd27940ac8669b836807e6143feb0950fe0049d'
+UPSTREAM = 'acf8bfee83ce9512c405f6c0ecd6c412d2ca9178'
 ALLOWED = {
     'app/src/androidTest/java/com/nuvio/tv/ui/screens/settings/TrackingSettingsOverviewTest.kt',
     'app/build.gradle.kts',
@@ -37,6 +37,56 @@ UI_SCALE_SETTING = {
     'app/src/test/java/com/nuvio/tv/ui/screens/settings/ThemeSettingsViewModelTest.kt',
 }
 ALLOWED |= UI_SCALE_SETTING
+# Self-contained NuvioTV upstream changes after 1.1.0-beta.9, cherry-picked with -x (night mode,
+# mark as watched, HDR/HLG detection, MDBList anime remap, reused-link stream info).
+UPSTREAM_NUVIOTV_PICKS = {
+    'app/src/main/java/com/nuvio/tv/core/player/dvmkv/HevcAlternativeTransferSei.java',
+    'app/src/main/java/com/nuvio/tv/core/player/dvmkv/MatroskaExtractor.java',
+    'app/src/main/java/com/nuvio/tv/core/sync/ProfileSettingsSyncService.kt',
+    'app/src/main/java/com/nuvio/tv/data/local/PlayerSettingsDataStore.kt',
+    'app/src/main/java/com/nuvio/tv/data/local/StreamLinkCacheDataStore.kt',
+    'app/src/main/java/com/nuvio/tv/data/mdblist/MdbListEpisodeMappingService.kt',
+    'app/src/main/java/com/nuvio/tv/data/mdblist/MdbListProgressProjection.kt',
+    'app/src/main/java/com/nuvio/tv/data/mdblist/MdbListTrackingProgressProvider.kt',
+    'app/src/main/java/com/nuvio/tv/data/mdblist/MdbListTrackingProvider.kt',
+    'app/src/main/java/com/nuvio/tv/data/remote/api/TmdbApi.kt',
+    'app/src/main/java/com/nuvio/tv/data/repository/AddonEpisodeListService.kt',
+    'app/src/main/java/com/nuvio/tv/data/repository/TraktEpisodeMapping.kt',
+    'app/src/main/java/com/nuvio/tv/data/repository/TraktEpisodeMappingService.kt',
+    'app/src/main/java/com/nuvio/tv/ui/components/ContinueWatchingSection.kt',
+    'app/src/main/java/com/nuvio/tv/ui/components/GridContinueWatchingSection.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/home/ClassicHomeContent.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/home/GridHomeContent.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/home/HomeScreen.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/home/HomeUiState.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/AudioSelectionOverlay.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/NightModeAudioProcessor.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PeakLimiter.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerRuntimeController.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerRuntimeControllerInitialization.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerRuntimeControllerObservers.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerRuntimeControllerPlaybackEvents.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerRuntimeControllerStreams.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerRuntimeControllerTracks.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerScreen.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerUiState.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/StreamSourcesSidePanel.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutSettingsViewModel.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/settings/PlaybackAudioSettings.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/settings/PlaybackSettingsModel.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/settings/PlaybackSettingsViewModel.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/stream/StreamScreenViewModel.kt',
+    'app/src/main/res/values/strings.xml',
+    'app/src/test/java/com/nuvio/tv/core/player/dvmkv/HevcAlternativeTransferSeiTest.kt',
+    'app/src/test/java/com/nuvio/tv/data/mdblist/MdbListEpisodeMappingServiceTest.kt',
+    'app/src/test/java/com/nuvio/tv/data/mdblist/MdbListTrackingProgressProviderTest.kt',
+    'app/src/test/java/com/nuvio/tv/ui/screens/home/ContinueWatchingMarkWatchedTest.kt',
+    'app/src/test/java/com/nuvio/tv/ui/screens/player/CurrentStreamIndexTest.kt',
+    'app/src/test/java/com/nuvio/tv/ui/screens/player/NightModeAudioProcessorTest.kt',
+}
+ALLOWED |= UPSTREAM_NUVIOTV_PICKS
 PROTECTED = [
     'app/src/main/java/com/nuvio/tv/core/auth/AuthManager.kt',
     'app/src/main/java/com/nuvio/tv/core/di/SupabaseModule.kt',

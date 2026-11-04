@@ -15,7 +15,7 @@ class AniListPreservationTests(unittest.TestCase):
         result=verify()
         self.assertTrue(result['qr_auth_supabase_original'])
         self.assertTrue(result['player_native_addons_themes_original'])
-        self.assertEqual(1665,result['original_entries'])
+        self.assertEqual(1697,result['original_entries'])  # Lite 2.4.0 tree
 
     def test_missing_public_configuration_stops_publication(self):
         with self.assertRaisesRegex(ValueError,'NUVIO_SUPABASE_URL'):
