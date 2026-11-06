@@ -282,7 +282,9 @@ data class TrackInfo(
     val channelCount: Int? = null,
     val isForced: Boolean = false,
     val isSelected: Boolean = false,
-    val sampleRate: Int? = null
+    val sampleRate: Int? = null,
+    /** The file marks this track as its default (Matroska/MP4 default flag). */
+    val isDefault: Boolean = false
 )
 
 data class NextEpisodeInfo(

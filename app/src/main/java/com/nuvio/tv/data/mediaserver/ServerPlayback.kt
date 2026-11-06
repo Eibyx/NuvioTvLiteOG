@@ -2,6 +2,7 @@ package com.nuvio.tv.data.mediaserver
 
 import android.os.SystemClock
 import android.util.Log
+import com.nuvio.tv.core.cloudstorage.CloudStreams
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
@@ -17,19 +18,23 @@ import kotlinx.coroutines.withTimeoutOrNull
 class ServerPlayback internal constructor(
     private val repository: ServerRepository,
     private val scope: CoroutineScope,
+    private val cloud: CloudStreams? = null,
     private val clock: () -> Long
 ) {
     @Inject
-    constructor(repository: ServerRepository) : this(
+    constructor(repository: ServerRepository, cloud: CloudStreams) : this(
         repository = repository,
         scope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
-        clock = SystemClock::elapsedRealtime
+        clock = SystemClock::elapsedRealtime,
+        cloud = cloud
     )
 
     private val lock = Any()
     private val active = mutableMapOf<String, ActivePlayback>()
 
     suspend fun prepare(target: ServerPlaybackTarget): ServerPlaybackSession {
+        // Cloud files play straight from the loopback server: no media server session to report.
+        if (cloud != null && cloud.isCloudTarget(target)) return cloud.prepare(target)
         val (provider, session, playback) = repository.call(target.item.connectionId) { provider, session ->
             Triple(provider, session, provider.preparePlayback(session, ServerPlaybackRequest(target, ServerPlayerCapabilities())))
         }
@@ -82,7 +87,10 @@ class ServerPlayback internal constructor(
         return current.provider.details(current.session, current.playback.target.item.itemId).userStates.firstOrNull()
     }
 
-    fun isServerSource(url: String?): Boolean = url != null && synchronized(lock) { url in active }
+    fun isCloudSource(url: String?): Boolean = cloud?.isCloudUrl(url) == true
+
+    fun isServerSource(url: String?): Boolean =
+        url != null && (synchronized(lock) { url in active } || cloud?.isCloudUrl(url) == true)
 
     fun onPlaybackSnapshot(url: String?, positionMs: Long, isPlaying: Boolean, isLoading: Boolean, isEnded: Boolean) {
         val playback = url?.let { synchronized(lock) { active[it] } } ?: return
@@ -95,6 +103,7 @@ class ServerPlayback internal constructor(
     }
 
     fun stop(url: String?) {
+        cloud?.takeIf { it.isCloudUrl(url) }?.stop(url)
         val playback = url?.let { synchronized(lock) { active.remove(it) } } ?: return
         playback.stop()
     }

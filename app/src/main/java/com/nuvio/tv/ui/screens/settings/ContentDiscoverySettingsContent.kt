@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Power
@@ -37,17 +38,32 @@ internal fun ContentDiscoverySettingsContent(
     val hubServersRequester = remember { FocusRequester() }
     val serversRequester = remember { FocusRequester() }
     val serverRequester = remember { FocusRequester() }
+    val hubCloudRequester = remember { FocusRequester() }
+    val cloudRequester = remember { FocusRequester() }
+    val cloudAccountRequester = remember { FocusRequester() }
     var returningToHub by remember { mutableStateOf(false) }
+    var returningFromCloud by remember { mutableStateOf(false) }
 
     BackHandler(enabled = serverPage != null) {
-        serverPage = if (serverPage == SERVERS_PAGE) null else SERVERS_PAGE
-        if (serverPage == null) returningToHub = true
+        val page = serverPage
+        serverPage = when {
+            page == SERVERS_PAGE || page == CLOUD_PAGE -> null
+            page?.startsWith(CLOUD_ACCOUNT_PREFIX) == true -> CLOUD_PAGE
+            else -> SERVERS_PAGE
+        }
+        if (serverPage == null) {
+            returningToHub = true
+            returningFromCloud = page == CLOUD_PAGE
+        }
     }
 
     LaunchedEffect(serverPage) {
-        val requester = when (serverPage) {
-            null -> hubServersRequester.takeIf { returningToHub }
-            SERVERS_PAGE -> serversRequester
+        val page = serverPage
+        val requester = when {
+            page == null -> (if (returningFromCloud) hubCloudRequester else hubServersRequester).takeIf { returningToHub }
+            page == SERVERS_PAGE -> serversRequester
+            page == CLOUD_PAGE -> cloudRequester
+            page.startsWith(CLOUD_ACCOUNT_PREFIX) -> cloudAccountRequester
             else -> serverRequester
         } ?: return@LaunchedEffect
         returningToHub = false
@@ -59,15 +75,27 @@ internal fun ContentDiscoverySettingsContent(
             onNavigateToAddons = onNavigateToAddons,
             onNavigateToPlugins = onNavigateToPlugins,
             onNavigateToServers = { serverPage = SERVERS_PAGE },
+            onNavigateToCloud = { serverPage = CLOUD_PAGE },
             showPlugins = showPlugins,
             initialFocusRequester = initialFocusRequester,
-            serversFocusRequester = hubServersRequester
+            serversFocusRequester = hubServersRequester,
+            cloudFocusRequester = hubCloudRequester
+        )
+        CLOUD_PAGE -> CloudStorageSettingsContent(
+            initialFocusRequester = cloudRequester,
+            onOpenAccount = { serverPage = CLOUD_ACCOUNT_PREFIX + it }
         )
         SERVERS_PAGE -> MediaServersSettingsContent(
             initialFocusRequester = serversRequester,
             onOpenServer = { serverPage = it }
         )
-        else -> MediaServerSettingsContent(
+        else -> if (page.startsWith(CLOUD_ACCOUNT_PREFIX)) {
+            CloudAccountSettingsContent(
+                accountId = page.removePrefix(CLOUD_ACCOUNT_PREFIX),
+                initialFocusRequester = cloudAccountRequester,
+                onBack = { serverPage = CLOUD_PAGE }
+            )
+        } else MediaServerSettingsContent(
             connectionId = page,
             initialFocusRequester = serverRequester,
             onOpenServer = { serverPage = it },
@@ -81,9 +109,11 @@ private fun ContentDiscoveryHub(
     onNavigateToAddons: () -> Unit,
     onNavigateToPlugins: () -> Unit,
     onNavigateToServers: () -> Unit,
+    onNavigateToCloud: () -> Unit,
     showPlugins: Boolean,
     initialFocusRequester: FocusRequester?,
-    serversFocusRequester: FocusRequester
+    serversFocusRequester: FocusRequester,
+    cloudFocusRequester: FocusRequester
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -112,6 +142,13 @@ private fun ContentDiscoveryHub(
                 leadingIcon = Icons.Default.Dns,
                 modifier = Modifier.focusRequester(serversFocusRequester)
             )
+            SettingsActionRow(
+                title = stringResource(R.string.settings_cloud_storage),
+                subtitle = stringResource(R.string.settings_cloud_storage_subtitle),
+                onClick = onNavigateToCloud,
+                leadingIcon = Icons.Default.Cloud,
+                modifier = Modifier.focusRequester(cloudFocusRequester)
+            )
             if (showPlugins) {
                 SettingsActionRow(
                     title = stringResource(R.string.plugin_title),
@@ -125,3 +162,5 @@ private fun ContentDiscoveryHub(
 }
 
 private const val SERVERS_PAGE = "servers"
+private const val CLOUD_PAGE = "cloud"
+private const val CLOUD_ACCOUNT_PREFIX = "cloud-account:"
