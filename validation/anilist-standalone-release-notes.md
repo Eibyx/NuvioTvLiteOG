@@ -4,15 +4,24 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 **Firma fija:** desde esta versión, NuvioTvOG se firma siempre con la misma clave. Las próximas versiones se instalan **encima**, conservando la sesión y los ajustes. Las pre-releases anteriores se conservan sin cambios.
 
+## Novedades en 0.6.0
+
+- **Almacenamiento en la nube (Google Drive y TeraBox)**, portado de NuvioMobileKai: Ajustes → Descubrimiento de contenido → **Almacenamiento en la nube**.
+  - Tus propios vídeos aparecen como fuente al buscar enlaces, junto a los addons (cada cuenta cuenta dentro del límite de consultas simultáneas).
+  - Las credenciales se introducen **desde el móvil**: la TV muestra un QR y un código de 6 cifras; la página solo existe mientras el QR está en pantalla y nunca devuelve credenciales.
+  - **Google Drive:** tu propio cliente OAuth (client ID + secret) y refresh token con alcance `drive.readonly`, o un `rclone.conf` sin cifrar. Google no permite el inicio de sesión con código de TV para ese alcance.
+  - **TeraBox (experimental):** cookie de sesión o valor `ndus`; solo dominios de TeraBox.
+  - Al conectar indexa toda la unidad; luego puedes elegir carpetas. Drive se actualiza por cambios; se resincroniza en segundo plano si el índice tiene más de 6 h. Nunca descarga, mueve ni cambia archivos.
+  - Reconoce `S02E12`, ` - 12` (fansub), `2x12`, `Temporada/Episodio` y números con contexto de carpeta; títulos de TMDB y AniList; OVA/especiales solo en la temporada 0; NCOP/NCED/PV/menús nunca. Asociación manual desde el móvil.
+  - Subtítulos `.srt/.ass/.vtt` junto al vídeo y, si ninguno está en tu idioma, el subtítulo propio del archivo.
+  - Reproduce con ExoPlayer y MPV a través de un servidor local en la propia TV (saltos, todas las pistas, ASS con fuentes incrustadas, progreso y siguiente episodio).
+  - Credenciales cifradas con Android Keystore, por perfil y solo en esta TV. Desconectar revoca el token de Google y borra credenciales, índice y asociaciones; cerrar sesión en Nuvio lo borra todo.
+  - En TVs de poca RAM indexa como máximo 8 000 vídeos (15 000 con 2–2,5 GB; 30 000 con más). Sin cuentas no se ejecuta nada.
+- **Firma fija:** se instala encima de la 0.5.0 sin desinstalar.
+
 ## Novedades en 0.5.0
 
-- **Base actualizada a NuvioTV-Lite 2.4.0** (NuvioTV 1.1.0-beta.9): subtítulos ASS dibujados sobre el vídeo, «Saltar intro» a partir de los capítulos y sin parpadeo, Simkl/MDBList sin picos de CPU y memoria al registrar lo visto, inicio moderno sin redibujado completo, controles atenuados en vídeo HDR, botones multimedia Bluetooth con MPV, decodificador liberado en segundo plano, pósteres con VPN DNS, y correcciones de reproducción automática, directos, pistas MKV, tráilers, idiomas debrid y foco.
-- **De NuvioTV upstream (1-4 nov.):** «Marcar como visto» en el menú de Continuar viendo; modo nocturno de audio; mejor detección de HDR/HLG; numeración de episodios de anime corregida en MDBList; la fuente actual se reconoce por nombre de archivo y conserva su información al reutilizar enlaces; «Ocultar contenido no estrenado» ya no se restablece.
-- **De Nuvio Arc:** las teclas numéricas del mando saltan al 0 %, 10 % … 90 % del vídeo (no en directos).
-- **Numeración propia:** la app se muestra como NuvioTvOG 0.5.0.
-- **Firma fija:** se instala encima de la 0.4.1 sin desinstalar.
-
-**No incluido (a propósito):** nivel de LFE (sustituye una biblioteca nativa de FFmpeg), el nuevo ajuste de memoria de upstream para 1 GB (Lite ya tiene el suyo y son incompatibles), la corrección de búsquedas repetidas (depende de otra función de upstream), y de Arc: miniaturas al buscar, servidores Jellyfin/Emby/Plex, passthrough y botones totalmente configurables (demasiado pesados o ligados al reproductor de Arc).
+- Base NuvioTV-Lite 2.4.0 (NuvioTV 1.1.0-beta.9), mejoras de NuvioTV upstream (Marcar como visto, modo nocturno de audio, HDR/HLG, MDBList anime) y teclas numéricas de Nuvio Arc para saltar al 0-90 %.
 
 ## Funciones de versiones anteriores
 
@@ -43,7 +52,7 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 ## Instalación
 
-> Si tienes **NuvioTvOG 0.4.1**, instala esta encima: conserva la sesión y los ajustes. Si tienes una anterior (v0.3.0 o v0.4.0, con firma debug), desinstálala una vez antes: `pm uninstall com.eibyx.nuviotvog`. NuvioTV-Lite original no se toca.
+> Si tienes **NuvioTvOG 0.4.1 o 0.5.0**, instala esta encima: conserva la sesión y los ajustes. Si tienes una anterior (v0.3.0 o v0.4.0, con firma debug), desinstálala una vez antes: `pm uninstall com.eibyx.nuviotvog`. NuvioTV-Lite original no se toca.
 
 1. Instala el APK en el TCL. Android lo trata como una aplicación distinta: no pide desinstalar NuvioTV-Lite y no toca sus datos.
 2. Abre **NuvioTvOG** e inicia sesión con el QR de Nuvio (sus datos son independientes).
@@ -52,6 +61,7 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 ## Limitaciones conocidas
 
+- **Almacenamiento en la nube no probado en un televisor físico** (Drive, TeraBox, página del QR). TeraBox puede dejar de funcionar si cambia su web. La página del móvil va por HTTP en tu red local.
 - **No probado en un televisor físico:** instalación junto a la original, reproducción, búfer de MPV, QR de Nuvio y login de AniList con mando. La coexistencia se comprobó en el APK (package, authorities, permisos y sharedUserId frente al APK oficial).
 - Un búfer grande usa memoria del televisor. Si la app se cierra durante la reproducción, baja la precarga o el búfer hacia atrás.
 - Mismo icono que la app original; solo cambia el nombre.

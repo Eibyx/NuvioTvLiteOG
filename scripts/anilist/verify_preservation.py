@@ -92,6 +92,21 @@ ARC_NUMBER_KEY_JUMP = {
     'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerScreen.kt',
 }
 ALLOWED |= ARC_NUMBER_KEY_JUMP
+# Owner-requested cloud storage (Google Drive, TeraBox) ported from NuvioMobileKai: cloud accounts as
+# media-server-like stream sources, file-default subtitle fallback for cloud files, settings entry.
+CLOUD_STORAGE = {
+    'app/src/main/java/com/nuvio/tv/data/mediaserver/ServerPlayback.kt',
+    'app/src/main/java/com/nuvio/tv/data/mediaserver/ServerStreams.kt',
+    'app/src/main/java/com/nuvio/tv/data/repository/StreamRepositoryImpl.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/NuvioMpvSurfaceView.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerRuntimeControllerMpv.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerRuntimeControllerServer.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerRuntimeControllerTracks.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerUiState.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/settings/ContentDiscoverySettingsContent.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsDesignSystem.kt',
+}
+ALLOWED |= CLOUD_STORAGE
 PROTECTED = [
     'app/src/main/java/com/nuvio/tv/core/auth/AuthManager.kt',
     'app/src/main/java/com/nuvio/tv/core/di/SupabaseModule.kt',
@@ -124,7 +139,8 @@ def verify(ref=None):
         'modified_original_files':changed,'qr_auth_supabase_original':True,
         'player_native_addons_themes_original':True,
         'mpv_cache_setting_files':sorted(set(changed) & MPV_CACHE_SETTING),
-        'ui_scale_setting_files':sorted(set(changed) & UI_SCALE_SETTING)}
+        'ui_scale_setting_files':sorted(set(changed) & UI_SCALE_SETTING),
+        'cloud_storage_files':sorted(set(changed) & CLOUD_STORAGE)}
 
 if __name__ == '__main__':
     p=argparse.ArgumentParser(); p.add_argument('--ref'); p.add_argument('--output'); args=p.parse_args()
