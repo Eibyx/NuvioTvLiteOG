@@ -45,6 +45,10 @@ internal fun PlayerRuntimeController.stopServerPlayback() {
 internal val PlayerRuntimeController.isServerStream: Boolean
     get() = serverPlayback.isServerSource(currentStreamUrl)
 
+/** A file from the user's own cloud storage, served by the loopback server. */
+internal val PlayerRuntimeController.isCloudStream: Boolean
+    get() = serverPlayback.isCloudSource(currentStreamUrl)
+
 internal val PlayerRuntimeController.hasBurnedInServerSubtitle: Boolean
     get() = serverPlayback.burnInSubtitles(currentStreamUrl).any { it.selected }
 

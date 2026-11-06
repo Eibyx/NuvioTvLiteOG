@@ -1,0 +1,402 @@
+package com.nuvio.tv.core.cloudstorage
+
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import java.io.BufferedInputStream
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.Socket
+import java.net.SocketException
+import java.net.URLDecoder
+import java.net.URLEncoder
+import java.security.SecureRandom
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.SynchronousQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
+import kotlin.concurrent.thread
+
+/**
+ * Serves cloud files to the player on 127.0.0.1, the way `rclone serve http` does for Round Sync
+ * Extra: every player request (HEAD or GET with Range) becomes a ranged GET to the provider with
+ * the provider's headers, so seeking reads only the bytes the player asks for.
+ *
+ * - Bound to the loopback address only; each file gets an unguessable token in its path, and the
+ *   `Host` header must be the loopback address (no DNS rebinding from a web page).
+ * - A 401/403/404/410 or an HTML answer from the provider asks for a fresh link once, then retries.
+ * - Redirects are followed by hand: `Cookie` and `Authorization` go only to the same host or its
+ *   subdomains (Go's rule, which rclone follows), and never to loopback or private addresses.
+ * - At most [maxConnections] requests at a time; the upstream read stops as soon as the player
+ *   closes the connection.
+ */
+internal class LocalCloudStreamServer(
+    baseClient: OkHttpClient,
+    private val maxConnections: Int = 8,
+    private val idleStopMs: Long = 5 * 60 * 1000L,
+    private val nowMs: () -> Long = System::currentTimeMillis,
+    /** Tests serve the provider from loopback; the app never allows it. */
+    private val allowPrivateUpstream: Boolean = false,
+) {
+    internal class Session(
+        val fileName: String,
+        val sizeBytes: Long?,
+        val mimeType: String,
+        val resolve: suspend (Boolean) -> CloudPlaybackSource,
+    ) {
+        @Volatile var source: CloudPlaybackSource? = null
+        @Volatile var lastUsedMs: Long = 0L
+        val bytesServed = AtomicLong()
+        val upstreamRequests = AtomicLong()
+        val refreshes = AtomicLong()
+    }
+
+    /**
+     * Redirects are followed by hand (to drop credentials across hosts) and the resolver refuses
+     * loopback, private and link-local addresses, so neither a redirect nor a DNS answer can point
+     * the provider's cookie or token at the TV's own network.
+     */
+    private val client: OkHttpClient = baseClient.newBuilder()
+        .followRedirects(false)
+        .followSslRedirects(false)
+        .apply { if (!allowPrivateUpstream) dns(PublicOnlyDns) }
+        .build()
+
+    private val random = SecureRandom()
+    private val sessions = ConcurrentHashMap<String, Session>()
+    private val activeCalls = ConcurrentHashMap<Response, Pair<Session, okhttp3.Call>>()
+    private val lock = Any()
+    private var serverSocket: ServerSocket? = null
+    private var executor: ThreadPoolExecutor? = null
+    @Volatile private var lastEmptyAtMs: Long = 0L
+
+    val port: Int? get() = synchronized(lock) { serverSocket?.takeIf { !it.isClosed }?.localPort }
+
+    fun open(fileName: String, sizeBytes: Long?, mimeType: String, resolve: suspend (Boolean) -> CloudPlaybackSource): String {
+        val port = ensureStarted()
+        val token = newToken()
+        sessions[token] = Session(fileName, sizeBytes, mimeType, resolve).also { it.lastUsedMs = nowMs() }
+        val name = URLEncoder.encode(fileName.take(120), "UTF-8").replace("+", "%20")
+        return "http://127.0.0.1:$port/v1/$token/$name"
+    }
+
+    fun close(url: String?) {
+        val token = tokenOf(url) ?: return
+        val session = sessions.remove(token)
+        // The player is gone: stop every read from the provider for this file.
+        activeCalls.entries.filter { it.value.first === session }.forEach { entry ->
+            activeCalls.remove(entry.key)?.second?.cancel()
+        }
+        if (sessions.isEmpty()) lastEmptyAtMs = nowMs()
+    }
+
+    fun isLocalUrl(url: String?): Boolean = tokenOf(url)?.let(sessions::containsKey) == true
+
+    internal fun session(url: String?): Session? = tokenOf(url)?.let(sessions::get)
+
+    fun stop() = synchronized(lock) {
+        runCatching { serverSocket?.close() }
+        serverSocket = null
+        executor?.shutdownNow()
+        executor = null
+        sessions.clear()
+        activeCalls.values.forEach { it.second.cancel() }
+        activeCalls.clear()
+    }
+
+    private fun tokenOf(url: String?): String? {
+        val port = port ?: return null
+        val prefix = "http://127.0.0.1:$port/v1/"
+        if (url == null || !url.startsWith(prefix)) return null
+        return url.removePrefix(prefix).substringBefore('/').takeIf { it.isNotEmpty() }
+    }
+
+    private fun newToken(): String {
+        val bytes = ByteArray(32).also(random::nextBytes)
+        return bytes.joinToString("") { "%02x".format(it.toInt() and 0xFF) }
+    }
+
+    private fun ensureStarted(): Int = synchronized(lock) {
+        serverSocket?.takeIf { !it.isClosed }?.let { return it.localPort }
+        val socket = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+        val pool = ThreadPoolExecutor(0, maxConnections, 30, TimeUnit.SECONDS, SynchronousQueue()) { runnable ->
+            Thread(runnable, "NuvioCloudStream").apply { isDaemon = true }
+        }
+        serverSocket = socket
+        executor = pool
+        thread(name = "NuvioCloudStreamAccept", isDaemon = true) { acceptLoop(socket, pool) }
+        socket.localPort
+    }
+
+    private fun acceptLoop(socket: ServerSocket, pool: ThreadPoolExecutor) {
+        socket.soTimeout = 60_000
+        while (!socket.isClosed) {
+            val client = try {
+                socket.accept()
+            } catch (_: java.net.SocketTimeoutException) {
+                stopIfIdle(socket)
+                continue
+            } catch (_: IOException) {
+                break
+            }
+            try {
+                pool.execute { handle(client) }
+            } catch (_: java.util.concurrent.RejectedExecutionException) {
+                runCatching {
+                    client.getOutputStream().writeHead(503, "Service Unavailable", mapOf("Content-Length" to "0"))
+                    client.close()
+                }
+            }
+        }
+    }
+
+    private fun stopIfIdle(socket: ServerSocket) {
+        sessions.entries.removeIf { nowMs() - it.value.lastUsedMs > SESSION_IDLE_MS }
+        if (sessions.isEmpty() && lastEmptyAtMs > 0 && nowMs() - lastEmptyAtMs > idleStopMs) {
+            synchronized(lock) {
+                if (serverSocket === socket && sessions.isEmpty()) stop()
+            }
+        }
+    }
+
+    private fun handle(socket: Socket) {
+        socket.use { connection ->
+            connection.soTimeout = 30_000
+            val input = BufferedInputStream(connection.getInputStream())
+            val output = connection.getOutputStream()
+            val request = readRequest(input) ?: return
+            val port = port ?: return
+            val host = request.headers["host"]
+            if (host != "127.0.0.1:$port" && host != "localhost:$port") {
+                output.writeHead(403, "Forbidden", mapOf("Content-Length" to "0"))
+                return
+            }
+            val token = request.path.removePrefix("/v1/").substringBefore('/')
+            val session = if (request.path.startsWith("/v1/")) sessions[token] else null
+            if (session == null) {
+                output.writeHead(404, "Not Found", mapOf("Content-Length" to "0"))
+                return
+            }
+            session.lastUsedMs = nowMs()
+            when (request.method) {
+                "HEAD" -> head(session, output)
+                "GET" -> get(session, request.headers["range"], output)
+                else -> output.writeHead(405, "Method Not Allowed", mapOf("Allow" to "GET, HEAD", "Content-Length" to "0"))
+            }
+        }
+    }
+
+    private fun head(session: Session, output: OutputStream) {
+        val size = session.sizeBytes ?: probeSize(session)
+        val headers = buildMap {
+            put("Content-Type", session.mimeType)
+            put("Accept-Ranges", "bytes")
+            size?.let { put("Content-Length", it.toString()) }
+            put("Cache-Control", "no-store")
+        }
+        output.writeHead(200, "OK", headers)
+    }
+
+    private fun probeSize(session: Session): Long? = runCatching {
+        upstream(session, "bytes=0-0").use { response ->
+            response.header("Content-Range")?.substringAfter('/')?.toLongOrNull()
+        }
+    }.getOrNull()
+
+    private fun get(session: Session, range: String?, output: OutputStream) {
+        val validRange = range?.trim()?.takeIf { RANGE.matches(it) }
+        val response = try {
+            upstream(session, validRange)
+        } catch (error: CloudStorageException) {
+            output.writeHead(if (error.failure == CloudFailure.AUTH) 502 else 504, "Bad Gateway", mapOf("Content-Length" to "0"))
+            return
+        } catch (_: IOException) {
+            output.writeHead(504, "Gateway Timeout", mapOf("Content-Length" to "0"))
+            return
+        }
+        response.use {
+            val code = response.code
+            if (code != 200 && code != 206 && code != 416) {
+                output.writeHead(502, "Bad Gateway", mapOf("Content-Length" to "0"))
+                return
+            }
+            val headers = buildMap {
+                put("Content-Type", contentType(response, session))
+                put("Accept-Ranges", "bytes")
+                response.header("Content-Length")?.let { put("Content-Length", it) }
+                response.header("Content-Range")?.let { put("Content-Range", it) }
+                put("Cache-Control", "no-store")
+            }
+            output.writeHead(code, if (code == 206) "Partial Content" else if (code == 416) "Range Not Satisfiable" else "OK", headers)
+            if (code == 416) return
+            val body = response.body?.byteStream() ?: return
+            if (!copy(body, output, session)) {
+                // Cancel instead of letting OkHttp drain the rest of the body to reuse the connection.
+                activeCalls.remove(response)?.second?.cancel()
+            }
+        }
+        activeCalls.remove(response)
+    }
+
+    /** False when the player went away before the end. */
+    private fun copy(input: InputStream, output: OutputStream, session: Session): Boolean {
+        val buffer = ByteArray(64 * 1024)
+        try {
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                output.write(buffer, 0, read)
+                session.bytesServed.addAndGet(read.toLong())
+                session.lastUsedMs = nowMs()
+            }
+            output.flush()
+            return true
+        } catch (_: SocketException) {
+            // The player closed the connection (seek, pause, exit): stop reading from the provider.
+            return false
+        } catch (_: IOException) {
+            return false
+        }
+    }
+
+    /** A ranged GET to the provider; a fresh link once when the current one is refused. */
+    private fun upstream(session: Session, range: String?): Response {
+        val first = session.source ?: resolve(session, forceRefresh = false)
+        val response = fetch(first, range, session)
+        if (!response.needsFreshLink()) return response
+        response.close()
+        val fresh = resolve(session, forceRefresh = true)
+        session.refreshes.incrementAndGet()
+        return fetch(fresh, range, session)
+    }
+
+    private fun resolve(session: Session, forceRefresh: Boolean): CloudPlaybackSource =
+        runBlocking(Dispatchers.IO) { session.resolve(forceRefresh) }.also { session.source = it }
+
+    private fun fetch(source: CloudPlaybackSource, range: String?, session: Session): Response {
+        var url = source.url.toHttpUrlOrNull() ?: throw CloudStorageException(CloudFailure.FAILED)
+        val originHost = url.host
+        repeat(MAX_REDIRECTS + 1) {
+            if (!url.isSafeUpstream()) throw CloudStorageException(CloudFailure.FAILED)
+            val trusted = url.host == originHost || url.host.endsWith(".$originHost")
+            val request = Request.Builder().url(url).get().apply {
+                source.headers.forEach { (name, value) ->
+                    val sensitive = name.equals("Cookie", true) || name.equals("Authorization", true)
+                    if (!sensitive || trusted) header(name, value)
+                }
+                header("Accept-Encoding", "identity")
+                range?.let { header("Range", it) }
+            }.build()
+            session.upstreamRequests.incrementAndGet()
+            val call = client.newCall(request)
+            val response = call.execute()
+            if (response.code !in REDIRECT_CODES) {
+                activeCalls[response] = session to call
+                return response
+            }
+            val next = response.header("Location")?.let { url.resolve(it) }
+            response.close()
+            url = next ?: throw CloudStorageException(CloudFailure.FAILED)
+        }
+        throw CloudStorageException(CloudFailure.FAILED)
+    }
+
+    private fun Response.needsFreshLink(): Boolean =
+        code in setOf(401, 403, 404, 410) ||
+            (code == 200 && header("Content-Type")?.startsWith("text/html", ignoreCase = true) == true)
+
+    private fun contentType(response: Response, session: Session): String {
+        val upstream = response.header("Content-Type")?.substringBefore(';')?.trim()
+        return if (upstream.isNullOrEmpty() || upstream == "application/octet-stream" || upstream.startsWith("text/")) {
+            session.mimeType
+        } else {
+            upstream
+        }
+    }
+
+    private class LocalRequest(val method: String, val path: String, val headers: Map<String, String>)
+
+    private fun readRequest(input: InputStream): LocalRequest? {
+        val lines = mutableListOf<String>()
+        val line = StringBuilder()
+        var total = 0
+        while (true) {
+            val byte = input.read()
+            if (byte < 0) return null
+            total++
+            if (total > MAX_HEADER_BYTES) return null
+            if (byte == '\n'.code) {
+                val text = line.toString().trimEnd('\r')
+                line.clear()
+                if (text.isEmpty()) break
+                lines += text
+            } else {
+                line.append(byte.toChar())
+            }
+        }
+        val parts = lines.firstOrNull()?.split(' ') ?: return null
+        if (parts.size < 3) return null
+        val headers = lines.drop(1).mapNotNull { header ->
+            val separator = header.indexOf(':').takeIf { it > 0 } ?: return@mapNotNull null
+            header.substring(0, separator).trim().lowercase() to header.substring(separator + 1).trim()
+        }.toMap()
+        val path = runCatching { URLDecoder.decode(parts[1].substringBefore('?'), "UTF-8") }.getOrNull() ?: return null
+        return LocalRequest(parts[0].uppercase(), path, headers)
+    }
+
+    private fun OutputStream.writeHead(code: Int, reason: String, headers: Map<String, String>) {
+        val head = buildString {
+            append("HTTP/1.1 ").append(code).append(' ').append(reason).append("\r\n")
+            headers.forEach { (name, value) -> append(name).append(": ").append(value).append("\r\n") }
+            append("Connection: close\r\n\r\n")
+        }
+        write(head.toByteArray(Charsets.ISO_8859_1))
+        flush()
+    }
+
+    private fun HttpUrl.isSafeUpstream(): Boolean {
+        if (scheme != "https" && scheme != "http") return false
+        if (allowPrivateUpstream) return true
+        val host = host.lowercase()
+        if (host == "localhost" || host.endsWith(".localhost")) return false
+        val literal = Regex("""^\d{1,3}(\.\d{1,3}){3}$""").matches(host) || ':' in host
+        if (!literal) return true
+        return runCatching { !InetAddress.getByName(host).isPrivateOrLocal() }.getOrDefault(false)
+    }
+
+    /** Resolves only to public addresses. */
+    private object PublicOnlyDns : okhttp3.Dns {
+        override fun lookup(hostname: String): List<InetAddress> {
+            val addresses = okhttp3.Dns.SYSTEM.lookup(hostname).filterNot { it.isPrivateOrLocal() }
+            if (addresses.isEmpty()) throw java.net.UnknownHostException("No public address")
+            return addresses
+        }
+    }
+
+    companion object {
+        internal fun InetAddress.isPrivateOrLocal(): Boolean {
+            if (isLoopbackAddress || isSiteLocalAddress || isLinkLocalAddress || isAnyLocalAddress || isMulticastAddress) {
+                return true
+            }
+            val bytes = address
+            // IPv6 unique local (fc00::/7) and IPv4 carrier-grade NAT (100.64.0.0/10).
+            if (bytes.size == 16 && (bytes[0].toInt() and 0xFE) == 0xFC) return true
+            if (bytes.size == 4 && (bytes[0].toInt() and 0xFF) == 100 && (bytes[1].toInt() and 0xC0) == 64) return true
+            return false
+        }
+
+        private val RANGE = Regex("""^bytes=\d*-\d*$""")
+        private val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
+        private const val MAX_REDIRECTS = 5
+        private const val MAX_HEADER_BYTES = 16 * 1024
+        private const val SESSION_IDLE_MS = 12 * 60 * 60 * 1000L
+    }
+}

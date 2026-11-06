@@ -721,7 +721,8 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
                     channelCount = null,
                     isSelected = false,
                     isForced = forced,
-                    isExternal = external
+                    isExternal = external,
+                    isDefault = mpv.getPropertyBoolean("track-list/$i/default") == true
                 )
             }
         }
@@ -935,7 +936,8 @@ data class MpvTrack(
     val channelCount: Int?,
     val isSelected: Boolean,
     val isForced: Boolean,
-    val isExternal: Boolean
+    val isExternal: Boolean,
+    val isDefault: Boolean = false
 )
 
 /**

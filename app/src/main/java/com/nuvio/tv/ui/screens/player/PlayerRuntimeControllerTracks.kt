@@ -154,7 +154,8 @@ internal fun PlayerRuntimeController.updateAvailableTracks(tracks: Tracks) {
                             trackId = format.id,
                             codec = CustomDefaultTrackNameProvider.formatNameFromMime(format.sampleMimeType),
                             isForced = hasForcedFlag || nameHintForced || isSongsAndSigns,
-                            isSelected = isSelected
+                            isSelected = isSelected,
+                            isDefault = (format.selectionFlags and C.SELECTION_FLAG_DEFAULT) != 0
                         )
                     )
                 }
@@ -1906,6 +1907,16 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
         maybeRunAutomaticSubtitleSync(addonMatch) // AutoSync hook
     } else {
         Log.d(PlayerRuntimeController.TAG, "AUTO_SUB no addon match for targets=$targets")
+        // Cloud files only: fall back to the file's own default subtitle once add-ons have answered.
+        if (isCloudStream && !state.isLoadingAddonSubtitles && state.selectedSubtitleTrackIndex < 0) {
+            val fileDefault = findFileDefaultSubtitleTrackIndex(state.subtitleTracks, targets, selectedAudioTrack)
+            if (fileDefault >= 0) {
+                autoSubtitleSelected = true
+                Log.d(PlayerRuntimeController.TAG, "AUTO_SUB pick file default index=$fileDefault")
+                selectSubtitleTrack(fileDefault)
+                _uiState.update { it.copy(selectedSubtitleTrackIndex = fileDefault, selectedAddonSubtitle = null) }
+            }
+        }
     }
 }
 

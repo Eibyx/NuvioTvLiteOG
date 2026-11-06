@@ -430,7 +430,8 @@ private fun PlayerRuntimeController.applyMpvTrackSnapshot(snapshot: MpvTrackSnap
                 trackId = track.id.toString(),
                 codec = track.codec,
                 isForced = track.isForced,
-                isSelected = track.isSelected
+                isSelected = track.isSelected,
+                isDefault = track.isDefault
             )
         }
 

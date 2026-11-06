@@ -282,7 +282,11 @@ class StreamRepositoryImpl @Inject constructor(
                 serverSources.forEach { source ->
                     launch {
                         try {
-                            val streams = source.load()
+                            val streams = if (source.limited) {
+                                addonFetchSemaphore.withPermit { source.load() }
+                            } else {
+                                source.load()
+                            }
                             if (streams.isNotEmpty()) {
                                 resultChannel.send(AddonStreams(addonName = source.name, addonLogo = null, streams = streams))
                             } else {
