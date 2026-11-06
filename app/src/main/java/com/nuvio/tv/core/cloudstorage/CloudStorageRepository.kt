@@ -197,6 +197,10 @@ class CloudStorageRepository internal constructor(
 
     fun setShowFirst(id: String, showFirst: Boolean) = update(id) { it.copy(showFirst = showFirst) }
 
+    /** null: automatic; 1–4 simultaneous connections when playing. Applies from the next play. */
+    fun setConnections(id: String, connections: Int?) =
+        update(id) { it.copy(connections = connections?.coerceIn(1, LocalCloudStreamServer.MAX_CONNECTIONS)) }
+
     fun setFolders(id: String, folders: List<CloudFolderRef>) {
         update(id) { it.copy(folders = folders.distinctBy { folder -> folder.id }) }
         syncInBackground(id)

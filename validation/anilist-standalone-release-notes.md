@@ -6,6 +6,7 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 ## Novedades en 0.6.3
 
+- **Conexiones simultáneas por cuenta:** Ajustes → Descubrimiento de contenido → Almacenamiento en la nube → tu cuenta → **Conexiones simultáneas**: Automático (3 en TVs con poca RAM, 4 en el resto), 1 conexión (como antes de la 0.6.2), 2, 3 o 4. Así puedes dejar Drive con 1 y TeraBox con varias. Se aplica desde el siguiente vídeo.
 - **TeraBox sin pausas largas:** si una conexión con TeraBox deja de enviar datos, se corta a los 8 s y ese bloque se pide de nuevo por otra conexión (hasta 5 intentos, renovando el enlace si caducó). Antes el reproductor podía esperar hasta un minuto con el búfer vacío.
 - **Anime de la nube con AIOmetadata:** los títulos de AniList (romaji, inglés, nativo) ahora se encuentran también desde fichas con IDs de TVDB (AIOmetadata), IMDb y TMDB. Antes la consulta a ARM para esos IDs fallaba y solo coincidían los archivos nombrados como el título del catálogo.
 - **El índice de la nube no se borra solo:** si una sincronización en segundo plano encuentra de golpe muchos menos vídeos (sesión caducada o fallo del proveedor), se mantiene el índice anterior y se reintenta en una hora; «Sincronizar ahora» acepta la lista nueva.

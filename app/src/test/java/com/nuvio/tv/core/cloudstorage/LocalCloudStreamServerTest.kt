@@ -323,4 +323,17 @@ class LocalCloudStreamServerTest {
             quick.stop()
         }
     }
+
+    @Test
+    fun oneConnectionStreamsTheWholeRequestOnASingleRead() {
+        val url = server.open("a.mkv", size.toLong(), "video/x-matroska", connections = 1) { _ ->
+            CloudPlaybackSource("$base/file", mapOf("Cookie" to "ndus=test"), size.toLong())
+        }
+        player.newCall(Request.Builder().url(url).header("Range", "bytes=0-${6 * 1024 * 1024 - 1}").build()).execute().use {
+            assertEquals(206, it.code)
+            assertEquals(6 * 1024 * 1024, it.body!!.bytes().size)
+        }
+        // One upstream request, as before 0.6.2.
+        assertEquals(1, seenCookies.size)
+    }
 }

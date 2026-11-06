@@ -60,4 +60,12 @@
     <string name="cloud_speed_reference">un episodio de anime BD 1080p necesita unos 5–8 Mbit/s</string>
     <string name="cloud_speed_failed">Falló la prueba: sincroniza la cuenta y vuelve a intentarlo</string>
     <string name="cloud_status_incomplete">El proveedor devolvió muchos menos vídeos que antes: se mantiene el índice anterior. Pulsa Sincronizar ahora para aceptar la lista nueva</string>
+    <string name="cloud_connections">Conexiones simultáneas</string>
+    <string name="cloud_connections_subtitle">Cuántas conexiones leen el vídeo a la vez. Prueba con 1 si esta cuenta va peor con varias</string>
+    <string name="cloud_connections_dialog">Varias conexiones suman velocidad cuando el proveedor limita cada una (TeraBox). Una sola conexión funciona como antes de la 0.6.2. Se aplica desde el siguiente vídeo.</string>
+    <string name="cloud_connections_auto">Automático (%1$d)</string>
+    <string name="cloud_connections_single">1 conexión</string>
+    <string name="cloud_connections_n">%1$d conexiones</string>
+    <string name="cloud_connections_one_hint">Como antes de la 0.6.2; suele bastar para Google Drive</string>
+    <string name="cloud_connections_four_hint">Unos 10 MB de memoria por vídeo</string>
 </resources>

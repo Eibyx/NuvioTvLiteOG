@@ -60,4 +60,12 @@
     <string name="cloud_speed_reference">a Blu-ray 1080p anime episode needs about 5–8 Mbit/s</string>
     <string name="cloud_speed_failed">Speed test failed: sync the account and try again</string>
     <string name="cloud_status_incomplete">The provider returned far fewer videos than before: the previous index is kept. Press Sync now to accept the new list</string>
+    <string name="cloud_connections">Simultaneous connections</string>
+    <string name="cloud_connections_subtitle">How many connections read the video at once. Try 1 if this account plays worse with several</string>
+    <string name="cloud_connections_dialog">Several connections add up speed when the provider limits each one (TeraBox). One connection streams like versions before 0.6.2. Applies from the next video.</string>
+    <string name="cloud_connections_auto">Automatic (%1$d)</string>
+    <string name="cloud_connections_single">1 connection</string>
+    <string name="cloud_connections_n">%1$d connections</string>
+    <string name="cloud_connections_one_hint">As before 0.6.2; usually enough for Google Drive</string>
+    <string name="cloud_connections_four_hint">About 10 MB of memory per video</string>
 </resources>
