@@ -6,6 +6,8 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 ## Novedades en 0.6.3
 
+- **Anime de la nube con AIOmetadata:** los títulos de AniList (romaji, inglés, nativo) ahora se encuentran también desde fichas con IDs de TVDB (AIOmetadata), IMDb y TMDB. Antes la consulta a ARM para esos IDs fallaba y solo coincidían los archivos nombrados como el título del catálogo.
+- **El índice de la nube no se borra solo:** si una sincronización en segundo plano encuentra de golpe muchos menos vídeos (sesión caducada o fallo del proveedor), se mantiene el índice anterior y se reintenta en una hora; «Sincronizar ahora» acepta la lista nueva.
 - **Nombre corto de la fuente:** en los resultados, tus cuentas aparecen como **Drive** o **TeraBox**, sin el correo. Con varias cuentas del mismo tipo: «Drive 1», «Drive 2»…
 - **Firma fija:** se instala encima de la 0.6.2 sin desinstalar.
 

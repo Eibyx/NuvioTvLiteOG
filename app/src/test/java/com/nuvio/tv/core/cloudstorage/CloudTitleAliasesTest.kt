@@ -56,4 +56,18 @@ class CloudTitleAliasesTest {
         val second = aliases.aliases("k", listOf("Life with an Ordinary Guy"), ids)
         assertTrue(second.any { it.title.startsWith("Fantasy") })
     }
+
+    @Test
+    fun armIsAskedWithTheEndpointOfEachIdKind() = runTest {
+        val http = aniListHttp()
+        // AIOmetadata titles carry TVDB ids; Xperience IMDb/TMDB ones.
+        CloudTitleAliases(http).aliases("a", listOf("x"), TrackingExternalIds(tvdb = "405227"))
+        CloudTitleAliases(http).aliases("b", listOf("x"), TrackingExternalIds(imdb = "tt14669108"))
+        CloudTitleAliases(http).aliases("c", listOf("x"), TrackingExternalIds(tmdb = 125712))
+        CloudTitleAliases(http).aliases("d", listOf("x"), TrackingExternalIds(mal = 48997))
+        val armPaths = http.requests.map { it.url }.filter { "arm.haglund.dev" in it }.map { it.substringAfter("/api/v2").substringBefore('&') }
+        assertEquals(listOf("/thetvdb?id=405227", "/imdb?id=tt14669108", "/themoviedb?id=125712", "/ids?source=myanimelist"), armPaths)
+        // Never the /ids form ARM refuses for IMDb or TMDB.
+        assertTrue(http.requests.none { "source=imdb" in it.url || "source=themoviedb" in it.url })
+    }
 }

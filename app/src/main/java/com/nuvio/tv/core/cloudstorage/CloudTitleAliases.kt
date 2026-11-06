@@ -56,17 +56,31 @@ internal class CloudTitleAliases(
         null
     }
 
+    /**
+     * AniList entries for the title from ARM. Anime ids use `/ids?source=…`; IMDb, TVDB (what
+     * AIOmetadata uses) and TMDB have endpoints of their own (`/imdb`, `/thetvdb`, `/themoviedb`):
+     * `/ids` refuses them with a 400. Each entry carries its season in the numbering of the id it
+     * was found by, so the season hint matches the catalogue's seasons.
+     */
     private suspend fun armEntries(ids: TrackingExternalIds): List<Pair<Long, Int?>> {
-        val (source, id) = when {
-            ids.mal != null -> "myanimelist" to ids.mal.toString()
-            ids.kitsu != null -> "kitsu" to ids.kitsu.toString()
-            ids.anidb != null -> "anidb" to ids.anidb.toString()
-            ids.imdb != null -> "imdb" to ids.imdb
-            ids.tmdb != null -> "themoviedb" to ids.tmdb.toString()
-            else -> return emptyList()
+        val lookups = buildList {
+            ids.mal?.let { add(Triple("/ids", listOf("source" to "myanimelist", "id" to it.toString()), "thetvdb-season")) }
+            ids.kitsu?.let { add(Triple("/ids", listOf("source" to "kitsu", "id" to it.toString()), "thetvdb-season")) }
+            ids.anidb?.let { add(Triple("/ids", listOf("source" to "anidb", "id" to it.toString()), "thetvdb-season")) }
+            ids.imdb?.takeIf { it.startsWith("tt") }?.let { add(Triple("/imdb", listOf("id" to it), "thetvdb-season")) }
+            ids.tvdb?.takeIf { it.all(Char::isDigit) }?.let { add(Triple("/thetvdb", listOf("id" to it), "thetvdb-season")) }
+            ids.tmdb?.let { add(Triple("/themoviedb", listOf("id" to it.toString()), "themoviedb-season")) }
         }
-        val response = http.send(CloudHttpRequest("GET", cloudUrl(ARM_BASE_URL, "/ids", listOf("source" to source, "id" to id))))
-        if (response.status == 404) return emptyList()
+        for ((path, query, seasonKey) in lookups) {
+            val entries = armLookup(path, query, seasonKey)
+            if (entries.isNotEmpty()) return entries
+        }
+        return emptyList()
+    }
+
+    private suspend fun armLookup(path: String, query: List<Pair<String, String>>, seasonKey: String): List<Pair<Long, Int?>> {
+        val response = http.send(CloudHttpRequest("GET", cloudUrl(ARM_BASE_URL, path, query)))
+        if (response.status == 404 || response.status == 400) return emptyList()
         if (!response.isSuccess) throw CloudStorageException(CloudFailure.NETWORK)
         val objects = when (val element = Json.parseToJsonElement(response.body)) {
             is JsonArray -> element.mapNotNull { it as? JsonObject }
@@ -75,8 +89,8 @@ internal class CloudTitleAliases(
         }
         return objects.mapNotNull { entry ->
             val aniList = entry.primitive("anilist")?.let { it.longOrNull ?: it.contentOrNull?.toLongOrNull() } ?: return@mapNotNull null
-            aniList to entry.primitive("thetvdb-season")?.let { it.intOrNull ?: it.contentOrNull?.toIntOrNull() }
-        }
+            aniList to entry.primitive(seasonKey)?.let { it.intOrNull ?: it.contentOrNull?.toIntOrNull() }
+        }.distinctBy { it.first }
     }
 
     private suspend fun aniListTitles(id: Long): List<String> {
