@@ -4,6 +4,13 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 **Firma fija:** desde esta versión, NuvioTvOG se firma siempre con la misma clave. Las próximas versiones se instalan **encima**, conservando la sesión y los ajustes. Las pre-releases anteriores se conservan sin cambios.
 
+## Novedades en 0.6.1
+
+- **Inicio de sesión de Google Drive mucho más fácil:** en la página del QR basta el client ID y el secreto de un cliente de tipo **App de escritorio**. Pulsa «Iniciar sesión con Google», acepta y pega la dirección `127.0.0.1` a la que te lleva Google: la TV obtiene el refresh token sola. Ya no hace falta OAuth Playground ni rclone (siguen disponibles «Ya tengo un refresh token» y rclone.conf). La página trae los enlaces directos a Google Cloud Console.
+- **Errores claros al conectar Drive:** falta el refresh token, Drive API desactivada, client ID o secreto incorrectos, cliente que no es de escritorio, código caducado o app en modo prueba.
+- **Más anime detectado en la nube (como en NuvioMobileKai):** siempre se consultan los títulos de AniList (romaji, inglés, nativo y sinónimos), aunque el catálogo solo tenga el título en inglés o en español; se descarga la ficha si no estaba en memoria, y si AniList no responde se reintenta en la siguiente búsqueda en vez de quedarse sin esos títulos. Ejemplo: «Fantasy Bishoujo Juniku Ojisan to».
+- **Firma fija:** se instala encima de la 0.6.0 sin desinstalar.
+
 ## Novedades en 0.6.0
 
 - **Almacenamiento en la nube (Google Drive y TeraBox)**, portado de NuvioMobileKai: Ajustes → Descubrimiento de contenido → **Almacenamiento en la nube**.
@@ -52,7 +59,7 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 ## Instalación
 
-> Si tienes **NuvioTvOG 0.4.1 o 0.5.0**, instala esta encima: conserva la sesión y los ajustes. Si tienes una anterior (v0.3.0 o v0.4.0, con firma debug), desinstálala una vez antes: `pm uninstall com.eibyx.nuviotvog`. NuvioTV-Lite original no se toca.
+> Si tienes **NuvioTvOG 0.4.1, 0.5.0 o 0.6.0**, instala esta encima: conserva la sesión y los ajustes. Si tienes una anterior (v0.3.0 o v0.4.0, con firma debug), desinstálala una vez antes: `pm uninstall com.eibyx.nuviotvog`. NuvioTV-Lite original no se toca.
 
 1. Instala el APK en el TCL. Android lo trata como una aplicación distinta: no pide desinstalar NuvioTV-Lite y no toca sus datos.
 2. Abre **NuvioTvOG** e inicia sesión con el QR de Nuvio (sus datos son independientes).

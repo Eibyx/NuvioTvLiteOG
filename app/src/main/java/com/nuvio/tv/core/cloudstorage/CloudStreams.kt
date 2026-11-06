@@ -1,8 +1,8 @@
 package com.nuvio.tv.core.cloudstorage
 
 import android.util.Log
+import com.nuvio.tv.core.network.NetworkResult
 import com.nuvio.tv.core.tmdb.TmdbMetadataService
-import com.nuvio.tv.core.tracking.TrackingExternalIds
 import com.nuvio.tv.core.tracking.parseTrackingExternalIds
 import com.nuvio.tv.data.mediaserver.ServerItemRef
 import com.nuvio.tv.data.mediaserver.ServerPlayMethod
@@ -17,7 +17,9 @@ import com.nuvio.tv.domain.model.StreamBehaviorHints
 import com.nuvio.tv.domain.model.Subtitle
 import com.nuvio.tv.domain.repository.MetaRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Cloud files as stream sources, next to add-ons, plugins and media servers (ported from
@@ -90,7 +92,15 @@ class CloudStreams internal constructor(
         val parentId = parts.take(parentSize).joinToString(":")
         val position = parts.drop(parentSize).mapNotNull { it.toIntOrNull() }
         val isSeries = !type.equals("movie", ignoreCase = true)
+        // Like Kai: the cached details, or a fetch when the title was opened without them.
         val meta: Meta? = metaRepository.getCachedMeta(type, parentId)
+            ?: withTimeoutOrNull(META_TIMEOUT_MS) {
+                runCatching {
+                    metaRepository.getMetaFromAllAddons(type, parentId)
+                        .first { it !is NetworkResult.Loading }
+                        .let { (it as? NetworkResult.Success)?.data }
+                }.getOrNull()
+            }
         val ids = parseTrackingExternalIds(parentId).let { parsed ->
             val metaImdb = meta?.imdbId?.takeIf { it.startsWith("tt") }
             if (parsed.imdb == null && metaImdb != null) parsed.copy(imdb = metaImdb) else parsed
@@ -107,7 +117,7 @@ class CloudStreams internal constructor(
             meta?.name,
             ids.tmdb?.let { originalTitle(it.toString(), ContentType.fromString(type)) }
         )
-        val titleAliases = aliases.aliases("$type:$parentId", names, ids, isAnimeCandidate(ids, meta))
+        val titleAliases = aliases.aliases("$type:$parentId", names, ids)
         val perSeason = meta?.videos.orEmpty()
             .filter { (it.season ?: 0) > 0 && (it.episode ?: 0) > 0 }
             .groupingBy { it.season!! }
@@ -131,12 +141,6 @@ class CloudStreams internal constructor(
             }
         )
     }
-
-    private fun isAnimeCandidate(ids: TrackingExternalIds, meta: Meta?): Boolean =
-        ids.anilist != null || ids.mal != null || ids.kitsu != null || ids.anidb != null ||
-            meta?.genres.orEmpty().any { it.contains("anim", ignoreCase = true) } ||
-            meta?.country?.contains("JP", ignoreCase = true) == true ||
-            meta?.country?.contains("Japan", ignoreCase = true) == true
 
     // ---- Playback ----------------------------------------------------------------------------
 
@@ -241,6 +245,7 @@ class CloudStreams internal constructor(
         private val GENERIC_EPISODE_TITLE = Regex("(?i)(episode|episodio|ep\\.?)\\s*\\d+")
         private val DIGITS = Regex("\\d+")
         private val YEAR = Regex("""(19|20)\d{2}""")
+        private const val META_TIMEOUT_MS = 8_000L
     }
 }
 

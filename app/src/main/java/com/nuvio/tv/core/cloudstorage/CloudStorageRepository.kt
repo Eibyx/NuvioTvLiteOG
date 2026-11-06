@@ -49,6 +49,9 @@ class CloudStorageRepository internal constructor(
     private var credentials: Map<String, CloudCredentials> = emptyMap()
     private val providers = mutableMapOf<String, CloudProvider>()
 
+    /** Google sign-in finished from the phone; created only when the setup page asks for it. */
+    internal val driveSignIn: GoogleDriveSignIn by lazy { GoogleDriveSignIn(http) }
+
     fun selectProfile(profileId: Int) {
         activeProfileId = profileId
         ensureLoaded()

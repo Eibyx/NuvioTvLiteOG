@@ -104,8 +104,12 @@ data class CloudCredentials(
     override fun toString(): String = "CloudCredentials(<redacted>)"
 }
 
-class CloudStorageException(val failure: CloudFailure, cause: Throwable? = null) :
-    Exception(failure.name, cause)
+class CloudStorageException(
+    val failure: CloudFailure,
+    cause: Throwable? = null,
+    /** A short, secret-free reason for the setup page (`drive_api_disabled`, `invalid_client`…). */
+    val detail: String? = null
+) : Exception(failure.name, cause)
 
 enum class CloudFailure {
     /** The session or token was rejected: the user has to sign in again. */

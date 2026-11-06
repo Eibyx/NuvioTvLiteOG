@@ -29,31 +29,31 @@ internal class CloudTitleAliases(
     private val lock = Any()
     private val cache = LinkedHashMap<String, List<CloudTitleAlias>>()
 
-    suspend fun aliases(
-        cacheKey: String,
-        names: List<String>,
-        ids: TrackingExternalIds,
-        isAnimeCandidate: Boolean
-    ): List<CloudTitleAlias> {
+    /** Asks ARM and AniList for every title, as Kai does: a non-anime title just finds nothing. */
+    suspend fun aliases(cacheKey: String, names: List<String>, ids: TrackingExternalIds): List<CloudTitleAlias> {
         synchronized(lock) { cache[cacheKey] }?.let { return it }
+        // Null when AniList did not answer: then the result is not cached, the next search retries.
+        val aniList = withTimeoutOrNull(timeoutMs) { aniListAliases(ids) }
         val result = buildList {
             names.filter { it.isNotBlank() }.forEach { add(CloudTitleAlias(it)) }
-            if (isAnimeCandidate) addAll(withTimeoutOrNull(timeoutMs) { aniListAliases(ids) }.orEmpty())
+            addAll(aniList.orEmpty())
         }.distinctBy { it.title.lowercase() to it.seasonHint }
-        synchronized(lock) {
-            cache[cacheKey] = result
-            while (cache.size > CACHE_SIZE) cache.remove(cache.keys.first())
+        if (aniList != null && names.isNotEmpty()) {
+            synchronized(lock) {
+                cache[cacheKey] = result
+                while (cache.size > CACHE_SIZE) cache.remove(cache.keys.first())
+            }
         }
         return result
     }
 
-    private suspend fun aniListAliases(ids: TrackingExternalIds): List<CloudTitleAlias> = try {
+    private suspend fun aniListAliases(ids: TrackingExternalIds): List<CloudTitleAlias>? = try {
         val entries = ids.anilist?.let { listOf(it to null) } ?: armEntries(ids)
         entries.take(MAX_ANILIST_ENTRIES).flatMap { (id, season) -> aniListTitles(id).map { CloudTitleAlias(it, season) } }
     } catch (error: Exception) {
         if (error is CancellationException) throw error
         Log.d(TAG, "AniList titles unavailable: ${error::class.java.simpleName}")
-        emptyList()
+        null
     }
 
     private suspend fun armEntries(ids: TrackingExternalIds): List<Pair<Long, Int?>> {
@@ -66,7 +66,8 @@ internal class CloudTitleAliases(
             else -> return emptyList()
         }
         val response = http.send(CloudHttpRequest("GET", cloudUrl(ARM_BASE_URL, "/ids", listOf("source" to source, "id" to id))))
-        if (!response.isSuccess) return emptyList()
+        if (response.status == 404) return emptyList()
+        if (!response.isSuccess) throw CloudStorageException(CloudFailure.NETWORK)
         val objects = when (val element = Json.parseToJsonElement(response.body)) {
             is JsonArray -> element.mapNotNull { it as? JsonObject }
             is JsonObject -> listOf(element)
@@ -91,7 +92,8 @@ internal class CloudTitleAliases(
                 jsonBody = query.toString()
             )
         )
-        if (!response.isSuccess) return emptyList()
+        if (response.status == 404) return emptyList()
+        if (!response.isSuccess) throw CloudStorageException(CloudFailure.NETWORK)
         val media = (Json.parseToJsonElement(response.body) as? JsonObject)
             ?.obj("data")?.obj("Media") ?: return emptyList()
         val title = media.obj("title")
