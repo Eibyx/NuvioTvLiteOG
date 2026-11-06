@@ -59,4 +59,5 @@
     <string name="cloud_speed_not_enough">insuficiente para este archivo (necesita %1$s Mbit/s): se parará</string>
     <string name="cloud_speed_reference">un episodio de anime BD 1080p necesita unos 5–8 Mbit/s</string>
     <string name="cloud_speed_failed">Falló la prueba: sincroniza la cuenta y vuelve a intentarlo</string>
+    <string name="cloud_status_incomplete">El proveedor devolvió muchos menos vídeos que antes: se mantiene el índice anterior. Pulsa Sincronizar ahora para aceptar la lista nueva</string>
 </resources>

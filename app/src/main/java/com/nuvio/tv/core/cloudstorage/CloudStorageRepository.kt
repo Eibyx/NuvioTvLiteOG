@@ -178,10 +178,11 @@ class CloudStorageRepository internal constructor(
         syncInBackground(account.id)
     }
 
-    fun syncInBackground(id: String) {
+    /** [force]: the user asked (Sync now): accept the result even if it shrank. */
+    fun syncInBackground(id: String, force: Boolean = false) {
         if (id in mutableState.value.syncing) return
         scope.launch {
-            runCatching { sync(id) }.onFailure { error ->
+            runCatching { sync(id, force) }.onFailure { error ->
                 if (error is CancellationException) throw error
                 Log.w(TAG, "Background sync failed: ${error.cloudFailure()}")
             }
@@ -244,9 +245,9 @@ class CloudStorageRepository internal constructor(
         (provider(id) ?: throw CloudStorageException(CloudFailure.NOT_FOUND)).browse(folder)
 
     /** Indexes the account's selected folders. Never downloads, moves or changes a file. */
-    suspend fun sync(id: String): Int = syncSnapshot(id).files.size
+    suspend fun sync(id: String, force: Boolean = false): Int = syncSnapshot(id, force).files.size
 
-    private suspend fun syncSnapshot(id: String): CloudIndexSnapshot {
+    private suspend fun syncSnapshot(id: String, force: Boolean = false): CloudIndexSnapshot {
         val account = account(id) ?: throw CloudStorageException(CloudFailure.NOT_FOUND)
         val provider = provider(id) ?: throw CloudStorageException(CloudFailure.NOT_FOUND)
         val profileId = activeProfileId
@@ -257,9 +258,21 @@ class CloudStorageRepository internal constructor(
         }
         if (!started) return index(id) ?: CloudIndexSnapshot()
         try {
-            val snapshot = provider.index(account.folders, index(id))
+            val previous = index(id)
+            val snapshot = provider.index(account.folders, previous)
             // The account may have been removed or the profile switched while indexing.
             if (profileId != activeProfileId || account(id) == null) return snapshot
+            // A background walk that suddenly finds far fewer videos (an expired session or a
+            // provider hiccup can answer with empty folders) must not wipe a good index.
+            val before = previous?.takeIf { it.folderIds == snapshot.folderIds }?.files?.size ?: 0
+            if (!force && before >= SHRINK_GUARD_MIN_FILES && snapshot.files.size < before / 2) {
+                Log.w(TAG, "Kept the previous index: ${snapshot.files.size} videos found, $before before")
+                update(id) {
+                    // Retry in about an hour instead of the usual six.
+                    it.copy(lastError = INCOMPLETE, lastSyncEpochMs = nowMs() - STALE_AFTER_MS + RETRY_AFTER_SHRINK_MS)
+                }
+                return previous!!
+            }
             indexStore.write(profileId, id, json.encodeToString(CloudIndexSnapshot.serializer(), snapshot))
             update(id) {
                 it.copy(
@@ -392,6 +405,10 @@ class CloudStorageRepository internal constructor(
     private companion object {
         const val TAG = "CloudStorage"
         const val STALE_AFTER_MS = 6 * 60 * 60 * 1000L
+        const val SHRINK_GUARD_MIN_FILES = 10
+        const val RETRY_AFTER_SHRINK_MS = 60 * 60 * 1000L
+        /** [CloudAccount.lastError] when a sync found far fewer videos and the old index was kept. */
+        const val INCOMPLETE = "INCOMPLETE"
     }
 }
 

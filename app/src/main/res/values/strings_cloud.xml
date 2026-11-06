@@ -59,4 +59,5 @@
     <string name="cloud_speed_not_enough">not enough for this file (needs %1$s Mbit/s): it will stall</string>
     <string name="cloud_speed_reference">a Blu-ray 1080p anime episode needs about 5–8 Mbit/s</string>
     <string name="cloud_speed_failed">Speed test failed: sync the account and try again</string>
+    <string name="cloud_status_incomplete">The provider returned far fewer videos than before: the previous index is kept. Press Sync now to accept the new list</string>
 </resources>

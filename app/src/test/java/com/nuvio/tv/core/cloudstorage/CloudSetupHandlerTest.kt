@@ -129,4 +129,31 @@ class CloudSetupHandlerTest {
         assertFalse(result.body.contains("fake-secret-value"))
         assertFalse(handler.finished)
     }
+
+    @Test
+    fun anEmptyBackgroundWalkDoesNotWipeTheIndex() = runTest {
+        var files = 12
+        val listing = FakeCloudHttp { request ->
+            when {
+                request.url.contains("/api/check/login") -> json("""{"errno":0}""")
+                request.url.contains("/api/list") && request.url.contains("page=1") -> json(
+                    """{"errno":0,"list":[""" + (1..files).joinToString(",") {
+                        """{"fs_id":$it,"server_filename":"Show - ${"%02d".format(it)}.mkv","path":"/Show - ${"%02d".format(it)}.mkv","size":100,"isdir":0,"category":1}"""
+                    } + "]}"
+                )
+                request.url.contains("/api/list") -> json("""{"errno":0,"list":[]}""")
+                else -> json("{}", 404)
+            }
+        }
+        val repo = CloudStorageRepository(MemoryPersistence(), MemoryIndex(), listing, CoroutineScope(Dispatchers.Unconfined), CloudIndexLimits.LOW_RAM)
+        val account = repo.addTeraBox("Mine", fakeCookie)
+        assertEquals(12, repo.sync(account.id))
+        files = 0
+        // A background sync that suddenly sees nothing keeps the old index.
+        assertEquals(12, repo.sync(account.id))
+        assertEquals("INCOMPLETE", repo.account(account.id)!!.lastError)
+        assertEquals(12, repo.account(account.id)!!.indexedFiles)
+        // "Sync now" accepts it.
+        assertEquals(0, repo.sync(account.id, force = true))
+    }
 }

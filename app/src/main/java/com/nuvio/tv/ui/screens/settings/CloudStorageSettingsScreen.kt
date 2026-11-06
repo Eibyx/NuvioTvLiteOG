@@ -475,6 +475,7 @@ private fun CloudAccount.statusText(syncing: Boolean): String {
     when (lastError) {
         null -> Unit
         CloudFailure.AUTH.name -> parts += stringResource(R.string.cloud_status_error_auth)
+        "INCOMPLETE" -> parts += stringResource(R.string.cloud_status_incomplete)
         else -> parts += stringResource(R.string.cloud_status_error)
     }
     if (truncated) parts += stringResource(R.string.cloud_status_truncated)

@@ -162,7 +162,7 @@ class CloudStorageViewModel @Inject constructor(
 
     fun setShowFirst(id: String, showFirst: Boolean) = repository.setShowFirst(id, showFirst)
 
-    fun syncNow(id: String) = repository.syncInBackground(id)
+    fun syncNow(id: String) = repository.syncInBackground(id, force = true)
 
     fun removeFolder(id: String, folderId: String) = repository.removeFolder(id, folderId)
 
