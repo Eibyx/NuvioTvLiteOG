@@ -29,6 +29,7 @@ class LocalCloudStreamServerTest {
     private lateinit var server: LocalCloudStreamServer
     private val upstreamBytes = AtomicLong()
     private val expiredHits = AtomicInteger()
+    private val redirectHits = AtomicInteger()
     private val seenCookies = CopyOnWriteArrayList<String?>()
     private val player = OkHttpClient.Builder().retryOnConnectionFailure(false).build()
 
@@ -71,7 +72,7 @@ class LocalCloudStreamServerTest {
             }
             when (path) {
                 "/expired" -> { expiredHits.incrementAndGet(); head("403 Forbidden", mapOf("Content-Length" to "0")) }
-                "/redirect-same" -> head("302 Found", mapOf("Location" to "$base/file", "Content-Length" to "0"))
+                "/redirect-same" -> redirectHits.incrementAndGet().let { head("302 Found", mapOf("Location" to "$base/file", "Content-Length" to "0")) }
                 "/redirect-other" -> head("302 Found", mapOf("Location" to "http://localhost:$port/file", "Content-Length" to "0"))
                 "/file" -> {
                     seenCookies += headers["cookie"]
@@ -239,6 +240,44 @@ class LocalCloudStreamServerTest {
         val url = open("/file")
         player.newCall(Request.Builder().url(url).post(okhttp3.RequestBody.create(null, ByteArray(0))).build()).execute().use {
             assertEquals(405, it.code)
+        }
+    }
+
+    @Test
+    fun largeReadsAreFetchedInParallelBlocksAndArriveInOrder() {
+        val url = open("/file")
+        val start = 3 * 1024 * 1024 + 12_345
+        val end = start + 7 * 1024 * 1024 + 999
+        player.newCall(Request.Builder().url(url).header("Range", "bytes=$start-$end").build()).execute().use { response ->
+            assertEquals(206, response.code)
+            assertEquals("bytes $start-$end/$size", response.header("Content-Range"))
+            val body = response.body!!.bytes()
+            assertEquals(end - start + 1, body.size)
+            for (i in body.indices step 4093) assertEquals(byteAt(start + i), body[i])
+            assertEquals(byteAt(end), body.last())
+        }
+        // Several ranged reads (2 MiB blocks), each with the cookie, none past the range.
+        assertTrue(seenCookies.size >= 4)
+        assertTrue(seenCookies.all { it == "ndus=test" })
+        assertEquals((end - start + 1).toLong(), upstreamBytes.get())
+    }
+
+    @Test
+    fun theRedirectTargetIsReusedForLaterBlocks() {
+        val url = open("/redirect-same")
+        player.newCall(Request.Builder().url(url).header("Range", "bytes=0-${6 * 1024 * 1024 - 1}").build()).execute().use {
+            assertEquals(206, it.code)
+            assertEquals(6 * 1024 * 1024, it.body!!.bytes().size)
+        }
+        // One redirect for the first block, then straight to the target.
+        assertEquals(1, redirectHits.get())
+    }
+
+    @Test
+    fun outOfRangeRequestsGet416() {
+        val url = open("/file")
+        player.newCall(Request.Builder().url(url).header("Range", "bytes=${size + 10}-").build()).execute().use {
+            assertEquals(416, it.code)
         }
     }
 }

@@ -203,6 +203,50 @@ class CloudStreams internal constructor(
         synchronized(lock) { sidecarUrls.remove(url) }?.forEach(server::close)
     }
 
+    /**
+     * Reads up to 32 MB of the account's largest video through the same loopback path the player
+     * uses, and reports how fast it arrives. Nothing is kept.
+     */
+    suspend fun speedTest(accountId: String): CloudSpeedResult = withContext(Dispatchers.IO) {
+        val provider = repository.provider(accountId) ?: throw CloudStorageException(CloudFailure.NOT_FOUND)
+        val file = repository.index(accountId)?.files?.filter { it.sizeBytes > 0 }?.maxByOrNull { it.sizeBytes }
+            ?: throw CloudStorageException(CloudFailure.NOT_FOUND)
+        val url = server.open(file.name, file.sizeBytes, file.mimeType ?: cloudMimeTypeFor(file.name)) { refresh ->
+            provider.resolve(file, refresh)
+        }
+        try {
+            val client = okhttp3.OkHttpClient.Builder()
+                .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                .retryOnConnectionFailure(false)
+                .build()
+            val wanted = minOf(SPEED_TEST_BYTES, file.sizeBytes)
+            val request = okhttp3.Request.Builder().url(url).header("Range", "bytes=0-${wanted - 1}").build()
+            val startedAt = System.currentTimeMillis()
+            var firstByteMs = -1L
+            var read = 0L
+            client.newCall(request).execute().use { response ->
+                if (response.code != 206 && response.code != 200) throw CloudStorageException(CloudFailure.FAILED)
+                val body = response.body?.byteStream() ?: throw CloudStorageException(CloudFailure.FAILED)
+                val buffer = ByteArray(64 * 1024)
+                while (read < wanted && System.currentTimeMillis() - startedAt < SPEED_TEST_MAX_MS) {
+                    val count = body.read(buffer)
+                    if (count < 0) break
+                    if (firstByteMs < 0) firstByteMs = System.currentTimeMillis() - startedAt
+                    read += count
+                }
+            }
+            val transferMs = (System.currentTimeMillis() - startedAt - firstByteMs.coerceAtLeast(0)).coerceAtLeast(1)
+            CloudSpeedResult(
+                fileName = file.name,
+                mbps = read * 8.0 / transferMs / 1000.0,
+                startMs = firstByteMs.coerceAtLeast(0),
+                fileMbps = file.durationMs?.takeIf { it > 0 }?.let { file.sizeBytes * 8.0 / it / 1000.0 }
+            )
+        } finally {
+            server.close(url)
+        }
+    }
+
     private fun key(accountId: String, fileId: String) = "$accountId/$fileId"
 
     private class MatchedFile(val file: CloudFile, val sidecars: List<CloudSidecarSubtitle>)
@@ -246,11 +290,16 @@ class CloudStreams internal constructor(
         private val DIGITS = Regex("\\d+")
         private val YEAR = Regex("""(19|20)\d{2}""")
         private const val META_TIMEOUT_MS = 8_000L
+        private const val SPEED_TEST_BYTES = 32L * 1024 * 1024
+        private const val SPEED_TEST_MAX_MS = 15_000L
     }
 }
 
 internal fun CloudAccount.sourceLabel(): String =
     if (name.equals(kind.displayName, ignoreCase = true)) kind.displayName else "${kind.displayName} · $name"
+
+/** [mbps] after the first byte; [startMs] until the first byte; [fileMbps] when the duration is known. */
+data class CloudSpeedResult(val fileName: String, val mbps: Double, val startMs: Long, val fileMbps: Double?)
 
 internal class CloudCardLines(val headline: String, val details: List<String>, val quality: String?)
 

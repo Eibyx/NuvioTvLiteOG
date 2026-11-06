@@ -1,5 +1,6 @@
 package com.nuvio.tv.core.cloudstorage
 
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import okhttp3.HttpUrl
@@ -19,6 +20,10 @@ import java.net.URLDecoder
 import java.net.URLEncoder
 import java.security.SecureRandom
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.concurrent.SynchronousQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -45,6 +50,14 @@ internal class LocalCloudStreamServer(
     private val nowMs: () -> Long = System::currentTimeMillis,
     /** Tests serve the provider from loopback; the app never allows it. */
     private val allowPrivateUpstream: Boolean = false,
+    /**
+     * Parallel ranged reads to the provider. TeraBox caps the speed of each connection, Premium
+     * included (its own apps download with several), so one long read cannot keep up with a
+     * Blu-ray episode. Blocks are fetched [parallelReads] at a time and written to the player in
+     * order: at most `parallelReads × chunkBytes` in memory per stream.
+     */
+    private val parallelReads: Int = 3,
+    private val chunkBytes: Int = 2 * 1024 * 1024,
 ) {
     internal class Session(
         val fileName: String,
@@ -53,6 +66,10 @@ internal class LocalCloudStreamServer(
         val resolve: suspend (Boolean) -> CloudPlaybackSource,
     ) {
         @Volatile var source: CloudPlaybackSource? = null
+        /** Where the provider's link redirects to, reused until refused (saves a hop per read). */
+        @Volatile var finalUrl: HttpUrl? = null
+        @Volatile var finalTrusted: Boolean = false
+        @Volatile var finalFor: CloudPlaybackSource? = null
         @Volatile var lastUsedMs: Long = 0L
         val bytesServed = AtomicLong()
         val upstreamRequests = AtomicLong()
@@ -73,6 +90,10 @@ internal class LocalCloudStreamServer(
     private val random = SecureRandom()
     private val sessions = ConcurrentHashMap<String, Session>()
     private val activeCalls = ConcurrentHashMap<Response, Pair<Session, okhttp3.Call>>()
+    private val pendingCalls = ConcurrentHashMap<okhttp3.Call, Session>()
+    private val chunkPool: ExecutorService = Executors.newCachedThreadPool { runnable ->
+        Thread(runnable, "NuvioCloudChunk").apply { isDaemon = true }
+    }
     private val lock = Any()
     private var serverSocket: ServerSocket? = null
     private var executor: ThreadPoolExecutor? = null
@@ -95,6 +116,10 @@ internal class LocalCloudStreamServer(
         activeCalls.entries.filter { it.value.first === session }.forEach { entry ->
             activeCalls.remove(entry.key)?.second?.cancel()
         }
+        pendingCalls.entries.filter { it.value === session }.forEach { entry ->
+            pendingCalls.remove(entry.key)
+            entry.key.cancel()
+        }
         if (sessions.isEmpty()) lastEmptyAtMs = nowMs()
     }
 
@@ -110,6 +135,8 @@ internal class LocalCloudStreamServer(
         sessions.clear()
         activeCalls.values.forEach { it.second.cancel() }
         activeCalls.clear()
+        pendingCalls.keys.forEach { it.cancel() }
+        pendingCalls.clear()
     }
 
     private fun tokenOf(url: String?): String? {
@@ -213,6 +240,18 @@ internal class LocalCloudStreamServer(
 
     private fun get(session: Session, range: String?, output: OutputStream) {
         val validRange = range?.trim()?.takeIf { RANGE.matches(it) }
+        val size = session.sizeBytes
+        if (size != null && size > 0 && parallelReads > 1) {
+            val span = byteSpan(validRange, size)
+            if (span == null) {
+                output.writeHead(416, "Range Not Satisfiable", mapOf("Content-Range" to "bytes */$size", "Content-Length" to "0"))
+                return
+            }
+            if (span.last - span.first + 1 > chunkBytes) {
+                getParallel(session, span, partial = validRange != null, size = size, output = output)
+                return
+            }
+        }
         val response = try {
             upstream(session, validRange)
         } catch (error: CloudStorageException) {
@@ -246,6 +285,122 @@ internal class LocalCloudStreamServer(
         activeCalls.remove(response)
     }
 
+    /** The requested bytes of a [size]-byte file, or null when the range is outside it. */
+    private fun byteSpan(range: String?, size: Long): LongRange? {
+        if (range == null) return 0L..(size - 1)
+        val (startText, endText) = range.removePrefix("bytes=").split('-', limit = 2)
+        val span = when {
+            startText.isEmpty() -> {
+                val suffix = endText.toLongOrNull() ?: return null
+                (size - suffix).coerceAtLeast(0L)..(size - 1)
+            }
+            else -> {
+                val start = startText.toLongOrNull() ?: return null
+                val end = endText.toLongOrNull()?.coerceAtMost(size - 1) ?: (size - 1)
+                start..end
+            }
+        }
+        return span.takeIf { it.first in 0 until size && it.last >= it.first }
+    }
+
+    /**
+     * Serves [span] from blocks fetched in parallel, in order. The first block is fetched before
+     * the answer starts, so a refused link becomes a 502 instead of a broken response.
+     */
+    private fun getParallel(session: Session, span: LongRange, partial: Boolean, size: Long, output: OutputStream) {
+        val startedAt = nowMs()
+        val blocks = generateSequence(span.first) { it + chunkBytes }
+            .takeWhile { it <= span.last }
+            .map { start -> start..minOf(start + chunkBytes - 1, span.last) }
+            .iterator()
+        val inFlight = ArrayDeque<Future<ByteArray>>()
+        fun refill(limit: Int = parallelReads) {
+            while (inFlight.size < limit && blocks.hasNext()) {
+                val block = blocks.next()
+                inFlight.addLast(chunkPool.submit<ByteArray> { readBlock(session, block) })
+            }
+        }
+        var served = 0L
+        try {
+            // The first block alone: it follows the provider's redirect (and refreshes an expired
+            // link) once, and the parallel blocks reuse the result.
+            refill(limit = 1)
+            val first = try {
+                inFlight.removeFirst().get()
+            } catch (error: ExecutionException) {
+                val cause = error.cause
+                val code = if (cause is CloudStorageException && cause.failure != CloudFailure.AUTH) 504 else 502
+                output.writeHead(code, "Bad Gateway", mapOf("Content-Length" to "0"))
+                return
+            }
+            val headers = buildMap {
+                put("Content-Type", session.mimeType)
+                put("Accept-Ranges", "bytes")
+                put("Content-Length", (span.last - span.first + 1).toString())
+                if (partial) put("Content-Range", "bytes ${span.first}-${span.last}/$size")
+                put("Cache-Control", "no-store")
+            }
+            output.writeHead(if (partial) 206 else 200, if (partial) "Partial Content" else "OK", headers)
+            var block: ByteArray = first
+            while (true) {
+                refill()
+                output.write(block)
+                served += block.size
+                session.bytesServed.addAndGet(block.size.toLong())
+                session.lastUsedMs = nowMs()
+                val next = inFlight.removeFirstOrNull() ?: break
+                block = next.get()
+            }
+            output.flush()
+        } catch (_: IOException) {
+            // The player closed the connection (seek, pause, exit).
+        } catch (_: ExecutionException) {
+            // A block failed twice: end the answer; the player asks again from where it stopped.
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+        } finally {
+            inFlight.forEach { it.cancel(true) }
+            val seconds = (nowMs() - startedAt).coerceAtLeast(1) / 1000.0
+            Log.i(
+                TAG,
+                "Served ${served / 1024} KiB in ${"%.1f".format(seconds)} s " +
+                    "(${"%.1f".format(served * 8 / seconds / 1_000_000)} Mbit/s, ${parallelReads} reads, " +
+                    "${session.refreshes.get()} link refreshes)"
+            )
+        }
+    }
+
+    /** One block, exactly; a second try (with a fresh link if needed) before giving up. */
+    private fun readBlock(session: Session, block: LongRange): ByteArray {
+        val length = (block.last - block.first + 1).toInt()
+        var lastError: Exception? = null
+        repeat(2) {
+            try {
+                upstream(session, "bytes=${block.first}-${block.last}").use { response ->
+                    if (response.code != 206 && !(response.code == 200 && block.first == 0L)) {
+                        throw CloudStorageException(if (response.code in 401..403) CloudFailure.AUTH else CloudFailure.FAILED)
+                    }
+                    val body = response.body?.byteStream() ?: throw IOException("No body")
+                    val bytes = ByteArray(length)
+                    var offset = 0
+                    while (offset < length) {
+                        val read = body.read(bytes, offset, length - offset)
+                        if (read < 0) throw IOException("Short block")
+                        offset += read
+                    }
+                    activeCalls.remove(response)
+                    return bytes
+                }
+            } catch (error: CloudStorageException) {
+                lastError = error
+            } catch (error: IOException) {
+                lastError = error
+                if (Thread.currentThread().isInterrupted) throw error
+            }
+        }
+        throw lastError ?: IOException("Block failed")
+    }
+
     /** False when the player went away before the end. */
     private fun copy(input: InputStream, output: OutputStream, session: Session): Boolean {
         val buffer = ByteArray(64 * 1024)
@@ -269,24 +424,40 @@ internal class LocalCloudStreamServer(
 
     /** A ranged GET to the provider; a fresh link once when the current one is refused. */
     private fun upstream(session: Session, range: String?): Response {
-        val first = session.source ?: resolve(session, forceRefresh = false)
+        val first = session.source ?: synchronized(session) { session.source ?: resolve(session, forceRefresh = false) }
+        val usedFinal = session.finalFor === first && session.finalUrl != null
         val response = fetch(first, range, session)
         if (!response.needsFreshLink()) return response
         response.close()
-        val fresh = resolve(session, forceRefresh = true)
-        session.refreshes.incrementAndGet()
+        if (usedFinal) {
+            // The redirect target expired: ask the provider's link again before replacing it.
+            session.finalUrl = null
+            val again = fetch(first, range, session)
+            if (!again.needsFreshLink()) return again
+            again.close()
+        }
+        val fresh = synchronized(session) {
+            // Parallel reads hit the same expired link: refresh it once.
+            session.source?.takeIf { it !== first } ?: resolve(session, forceRefresh = true).also {
+                session.refreshes.incrementAndGet()
+            }
+        }
         return fetch(fresh, range, session)
     }
 
     private fun resolve(session: Session, forceRefresh: Boolean): CloudPlaybackSource =
-        runBlocking(Dispatchers.IO) { session.resolve(forceRefresh) }.also { session.source = it }
+        runBlocking(Dispatchers.IO) { session.resolve(forceRefresh) }.also {
+            session.source = it
+            session.finalUrl = null
+        }
 
     private fun fetch(source: CloudPlaybackSource, range: String?, session: Session): Response {
-        var url = source.url.toHttpUrlOrNull() ?: throw CloudStorageException(CloudFailure.FAILED)
-        val originHost = url.host
+        val cached = session.finalUrl?.takeIf { session.finalFor === source }
+        var url = cached ?: source.url.toHttpUrlOrNull() ?: throw CloudStorageException(CloudFailure.FAILED)
+        val originHost = source.url.toHttpUrlOrNull()?.host ?: throw CloudStorageException(CloudFailure.FAILED)
         repeat(MAX_REDIRECTS + 1) {
             if (!url.isSafeUpstream()) throw CloudStorageException(CloudFailure.FAILED)
-            val trusted = url.host == originHost || url.host.endsWith(".$originHost")
+            val trusted = if (url === cached) session.finalTrusted else url.host == originHost || url.host.endsWith(".$originHost")
             val request = Request.Builder().url(url).get().apply {
                 source.headers.forEach { (name, value) ->
                     val sensitive = name.equals("Cookie", true) || name.equals("Authorization", true)
@@ -297,8 +468,18 @@ internal class LocalCloudStreamServer(
             }.build()
             session.upstreamRequests.incrementAndGet()
             val call = client.newCall(request)
-            val response = call.execute()
+            pendingCalls[call] = session
+            val response = try {
+                call.execute()
+            } finally {
+                pendingCalls.remove(call)
+            }
             if (response.code !in REDIRECT_CODES) {
+                if (response.code == 200 || response.code == 206) {
+                    session.finalUrl = url
+                    session.finalTrusted = trusted
+                    session.finalFor = source
+                }
                 activeCalls[response] = session to call
                 return response
             }
@@ -382,6 +563,7 @@ internal class LocalCloudStreamServer(
     }
 
     companion object {
+        private const val TAG = "CloudStream"
         internal fun InetAddress.isPrivateOrLocal(): Boolean {
             if (isLoopbackAddress || isSiteLocalAddress || isLinkLocalAddress || isAnyLocalAddress || isMulticastAddress) {
                 return true

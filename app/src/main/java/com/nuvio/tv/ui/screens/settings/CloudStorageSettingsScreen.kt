@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -130,6 +131,7 @@ internal fun CloudAccountSettingsContent(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val browse by viewModel.browse.collectAsStateWithLifecycle()
+    val speed by viewModel.speed.collectAsStateWithLifecycle()
     val account = state.accounts.firstOrNull { it.id == accountId }
     var confirmDisconnect by remember { mutableStateOf(false) }
     var removeFolder by remember { mutableStateOf<String?>(null) }
@@ -187,6 +189,20 @@ internal fun CloudAccountSettingsContent(
                             onClick = { viewModel.syncNow(account.id) },
                             leadingIcon = Icons.Default.Sync,
                             enabled = account.id !in state.syncing
+                        )
+                    }
+                    item(key = "speed") {
+                        val running = speed.containsKey(account.id) && speed[account.id] == null
+                        SettingsActionRow(
+                            title = stringResource(R.string.cloud_speed_test),
+                            subtitle = when {
+                                running -> stringResource(R.string.cloud_speed_running)
+                                speed[account.id] != null -> speed[account.id]
+                                else -> stringResource(R.string.cloud_speed_test_subtitle)
+                            },
+                            onClick = { viewModel.speedTest(account.id) },
+                            leadingIcon = Icons.Default.Speed,
+                            enabled = !running && account.indexedFiles > 0
                         )
                     }
                     item(key = "folders_label") { ServerSectionLabel(stringResource(R.string.cloud_section_folders)) }
