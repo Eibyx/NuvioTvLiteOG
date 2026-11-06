@@ -167,7 +167,8 @@ class CloudStreams internal constructor(
             }
             ?: throw CloudStorageException(CloudFailure.NOT_FOUND)
         val file = matched.file
-        val url = server.open(file.name, file.sizeBytes.takeIf { it > 0 }, file.mimeType ?: cloudMimeTypeFor(file.name)) { refresh ->
+        val connections = repository.account(accountId)?.connections
+        val url = server.open(file.name, file.sizeBytes.takeIf { it > 0 }, file.mimeType ?: cloudMimeTypeFor(file.name), connections) { refresh ->
             provider.resolve(file, refresh)
         }
         val subtitles = matched.sidecars.mapIndexed { index, sidecar ->
@@ -213,7 +214,7 @@ class CloudStreams internal constructor(
         val provider = repository.provider(accountId) ?: throw CloudStorageException(CloudFailure.NOT_FOUND)
         val file = repository.index(accountId)?.files?.filter { it.sizeBytes > 0 }?.maxByOrNull { it.sizeBytes }
             ?: throw CloudStorageException(CloudFailure.NOT_FOUND)
-        val url = server.open(file.name, file.sizeBytes, file.mimeType ?: cloudMimeTypeFor(file.name)) { refresh ->
+        val url = server.open(file.name, file.sizeBytes, file.mimeType ?: cloudMimeTypeFor(file.name), repository.account(accountId)?.connections) { refresh ->
             provider.resolve(file, refresh)
         }
         try {

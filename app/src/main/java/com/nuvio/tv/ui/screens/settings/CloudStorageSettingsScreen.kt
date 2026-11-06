@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.Speed
@@ -136,6 +137,7 @@ internal fun CloudAccountSettingsContent(
     var confirmDisconnect by remember { mutableStateOf(false) }
     var removeFolder by remember { mutableStateOf<String?>(null) }
     var removeLink by remember { mutableStateOf<String?>(null) }
+    var chooseConnections by remember { mutableStateOf(false) }
     CloudErrorToast(viewModel)
 
     LaunchedEffect(account == null) { if (account == null) onBack() }
@@ -189,6 +191,15 @@ internal fun CloudAccountSettingsContent(
                             onClick = { viewModel.syncNow(account.id) },
                             leadingIcon = Icons.Default.Sync,
                             enabled = account.id !in state.syncing
+                        )
+                    }
+                    item(key = "connections") {
+                        SettingsActionRow(
+                            title = stringResource(R.string.cloud_connections),
+                            subtitle = stringResource(R.string.cloud_connections_subtitle),
+                            value = connectionsLabel(account.connections, viewModel.automaticConnections),
+                            onClick = { chooseConnections = true },
+                            leadingIcon = Icons.Default.Hub
                         )
                     }
                     item(key = "speed") {
@@ -262,6 +273,31 @@ internal fun CloudAccountSettingsContent(
         }
     }
     CloudSetupOverlay(viewModel)
+
+    if (chooseConnections) {
+        val choices: List<Int?> = listOf(null, 1, 2, 3, 4)
+        SettingsSingleChoiceDialog(
+            title = stringResource(R.string.cloud_connections),
+            subtitle = stringResource(R.string.cloud_connections_dialog),
+            options = choices.map { value ->
+                SettingsPickerOption(
+                    value,
+                    connectionsLabel(value, viewModel.automaticConnections),
+                    when (value) {
+                        1 -> stringResource(R.string.cloud_connections_one_hint)
+                        4 -> stringResource(R.string.cloud_connections_four_hint)
+                        else -> null
+                    }
+                )
+            },
+            selectedValue = account.connections,
+            onOptionSelected = { value ->
+                viewModel.setConnections(account.id, value)
+                chooseConnections = false
+            },
+            onDismiss = { chooseConnections = false }
+        )
+    }
 
     if (confirmDisconnect) {
         CloudConfirmDialog(
@@ -445,6 +481,13 @@ private fun CloudErrorToast(viewModel: CloudStorageViewModel) {
             viewModel.clearError()
         }
     }
+}
+
+@Composable
+private fun connectionsLabel(value: Int?, automatic: Int): String = when (value) {
+    null -> stringResource(R.string.cloud_connections_auto, automatic)
+    1 -> stringResource(R.string.cloud_connections_single)
+    else -> stringResource(R.string.cloud_connections_n, value)
 }
 
 @Composable

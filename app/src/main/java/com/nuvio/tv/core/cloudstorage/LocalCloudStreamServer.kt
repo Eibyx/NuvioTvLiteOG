@@ -73,6 +73,8 @@ internal class LocalCloudStreamServer(
         val sizeBytes: Long?,
         val mimeType: String,
         val resolve: suspend (Boolean) -> CloudPlaybackSource,
+        /** Parallel block reads for this file; 1 streams each request on a single connection. */
+        val parallelReads: Int,
     ) {
         @Volatile var source: CloudPlaybackSource? = null
         /** Where the provider's link redirects to, reused until refused (saves a hop per read). */
@@ -116,10 +118,18 @@ internal class LocalCloudStreamServer(
 
     val port: Int? get() = synchronized(lock) { serverSocket?.takeIf { !it.isClosed }?.localPort }
 
-    fun open(fileName: String, sizeBytes: Long?, mimeType: String, resolve: suspend (Boolean) -> CloudPlaybackSource): String {
+    /** [connections]: the account's choice (1–4), or null for the device default. */
+    fun open(
+        fileName: String,
+        sizeBytes: Long?,
+        mimeType: String,
+        connections: Int? = null,
+        resolve: suspend (Boolean) -> CloudPlaybackSource
+    ): String {
         val port = ensureStarted()
         val token = newToken()
-        sessions[token] = Session(fileName, sizeBytes, mimeType, resolve).also { it.lastUsedMs = nowMs() }
+        val reads = connections?.coerceIn(1, MAX_CONNECTIONS) ?: parallelReads
+        sessions[token] = Session(fileName, sizeBytes, mimeType, resolve, reads).also { it.lastUsedMs = nowMs() }
         val name = URLEncoder.encode(fileName.take(120), "UTF-8").replace("+", "%20")
         return "http://127.0.0.1:$port/v1/$token/$name"
     }
@@ -256,7 +266,7 @@ internal class LocalCloudStreamServer(
     private fun get(session: Session, range: String?, output: OutputStream) {
         val validRange = range?.trim()?.takeIf { RANGE.matches(it) }
         val size = session.sizeBytes
-        if (size != null && size > 0 && parallelReads > 1) {
+        if (size != null && size > 0 && session.parallelReads > 1) {
             val span = byteSpan(validRange, size)
             if (span == null) {
                 output.writeHead(416, "Range Not Satisfiable", mapOf("Content-Range" to "bytes */$size", "Content-Length" to "0"))
@@ -329,7 +339,7 @@ internal class LocalCloudStreamServer(
             .map { start -> start..minOf(start + chunkBytes - 1, span.last) }
             .iterator()
         val inFlight = ArrayDeque<Future<ByteArray>>()
-        fun refill(limit: Int = parallelReads) {
+        fun refill(limit: Int = session.parallelReads) {
             while (inFlight.size < limit && blocks.hasNext()) {
                 val block = blocks.next()
                 inFlight.addLast(chunkPool.submit<ByteArray> { readBlock(session, block) })
@@ -379,7 +389,7 @@ internal class LocalCloudStreamServer(
             Log.i(
                 TAG,
                 "Served ${served / 1024} KiB in ${"%.1f".format(seconds)} s " +
-                    "(${"%.1f".format(served * 8 / seconds / 1_000_000)} Mbit/s, ${parallelReads} reads, " +
+                    "(${"%.1f".format(served * 8 / seconds / 1_000_000)} Mbit/s, ${session.parallelReads} reads, " +
                     "${session.refreshes.get()} link refreshes)"
             )
         }
@@ -592,6 +602,7 @@ internal class LocalCloudStreamServer(
     companion object {
         private const val TAG = "CloudStream"
         private const val BLOCK_ATTEMPTS = 5
+        const val MAX_CONNECTIONS = 4
         private val BLOCK_RETRY_DELAYS_MS = longArrayOf(0, 500, 1_000, 2_000)
         internal fun InetAddress.isPrivateOrLocal(): Boolean {
             if (isLoopbackAddress || isSiteLocalAddress || isLinkLocalAddress || isAnyLocalAddress || isMulticastAddress) {

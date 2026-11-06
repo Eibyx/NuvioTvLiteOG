@@ -37,7 +37,9 @@ data class CloudAccount(
     val lastError: String? = null,
     val manualLinks: List<CloudManualLink> = emptyList(),
     /** True when the last sync stopped at the device's file or folder limit. */
-    val truncated: Boolean = false
+    val truncated: Boolean = false,
+    /** Simultaneous connections when playing: null is automatic, 1 is a single stream (as before 0.6.2). */
+    val connections: Int? = null
 )
 
 /**

@@ -162,6 +162,11 @@ class CloudStorageViewModel @Inject constructor(
 
     fun setShowFirst(id: String, showFirst: Boolean) = repository.setShowFirst(id, showFirst)
 
+    fun setConnections(id: String, connections: Int?) = repository.setConnections(id, connections)
+
+    /** What "Automatic" means on this TV. */
+    val automaticConnections: Int = if (com.nuvio.tv.core.device.DeviceMemoryTier.isLowRam) 3 else 4
+
     fun syncNow(id: String) = repository.syncInBackground(id, force = true)
 
     fun removeFolder(id: String, folderId: String) = repository.removeFolder(id, folderId)
