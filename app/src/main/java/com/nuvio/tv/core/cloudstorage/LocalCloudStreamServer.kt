@@ -58,6 +58,15 @@ internal class LocalCloudStreamServer(
      */
     private val parallelReads: Int = 3,
     private val chunkBytes: Int = 2 * 1024 * 1024,
+    /**
+     * A block whose connection sends nothing for this long is dropped and asked again on a new
+     * connection. Blocks reach the player in order, so one stalled connection would otherwise hold
+     * playback until the general read timeout (a minute) while the player's buffer runs dry.
+     */
+    private val blockStallMs: Long = 8_000,
+    /** The most a single block request may take, data included, before it is retried. */
+    private val blockDeadlineMs: Long = 25_000,
+    private val sleep: (Long) -> Unit = { Thread.sleep(it) },
 ) {
     internal class Session(
         val fileName: String,
@@ -85,6 +94,12 @@ internal class LocalCloudStreamServer(
         .followRedirects(false)
         .followSslRedirects(false)
         .apply { if (!allowPrivateUpstream) dns(PublicOnlyDns) }
+        .build()
+
+    /** The client for parallel blocks: short stall and per-request limits, see [blockStallMs]. */
+    private val blockClient: OkHttpClient = client.newBuilder()
+        .readTimeout(blockStallMs, TimeUnit.MILLISECONDS)
+        .callTimeout(blockDeadlineMs, TimeUnit.MILLISECONDS)
         .build()
 
     private val random = SecureRandom()
@@ -370,13 +385,26 @@ internal class LocalCloudStreamServer(
         }
     }
 
-    /** One block, exactly; a second try (with a fresh link if needed) before giving up. */
+    /**
+     * One block, exactly. A stalled, cut or refused read is retried on a new connection (with a
+     * fresh link when the provider refuses the current one) a few times before the answer ends.
+     */
     private fun readBlock(session: Session, block: LongRange): ByteArray {
         val length = (block.last - block.first + 1).toInt()
         var lastError: Exception? = null
-        repeat(2) {
+        for (attempt in 0 until BLOCK_ATTEMPTS) {
+            if (Thread.currentThread().isInterrupted || session !in sessions.values) break
+            if (attempt > 0) {
+                Log.w(TAG, "Block at ${block.first / (1024 * 1024)} MiB retried (${lastError?.javaClass?.simpleName})")
+                try {
+                    sleep(BLOCK_RETRY_DELAYS_MS[minOf(attempt - 1, BLOCK_RETRY_DELAYS_MS.lastIndex)])
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    break
+                }
+            }
             try {
-                upstream(session, "bytes=${block.first}-${block.last}").use { response ->
+                upstream(session, "bytes=${block.first}-${block.last}", blockClient).use { response ->
                     if (response.code != 206 && !(response.code == 200 && block.first == 0L)) {
                         throw CloudStorageException(if (response.code in 401..403) CloudFailure.AUTH else CloudFailure.FAILED)
                     }
@@ -395,7 +423,6 @@ internal class LocalCloudStreamServer(
                 lastError = error
             } catch (error: IOException) {
                 lastError = error
-                if (Thread.currentThread().isInterrupted) throw error
             }
         }
         throw lastError ?: IOException("Block failed")
@@ -423,16 +450,16 @@ internal class LocalCloudStreamServer(
     }
 
     /** A ranged GET to the provider; a fresh link once when the current one is refused. */
-    private fun upstream(session: Session, range: String?): Response {
+    private fun upstream(session: Session, range: String?, http: OkHttpClient = client): Response {
         val first = session.source ?: synchronized(session) { session.source ?: resolve(session, forceRefresh = false) }
         val usedFinal = session.finalFor === first && session.finalUrl != null
-        val response = fetch(first, range, session)
+        val response = fetch(first, range, session, http)
         if (!response.needsFreshLink()) return response
         response.close()
         if (usedFinal) {
             // The redirect target expired: ask the provider's link again before replacing it.
             session.finalUrl = null
-            val again = fetch(first, range, session)
+            val again = fetch(first, range, session, http)
             if (!again.needsFreshLink()) return again
             again.close()
         }
@@ -442,7 +469,7 @@ internal class LocalCloudStreamServer(
                 session.refreshes.incrementAndGet()
             }
         }
-        return fetch(fresh, range, session)
+        return fetch(fresh, range, session, http)
     }
 
     private fun resolve(session: Session, forceRefresh: Boolean): CloudPlaybackSource =
@@ -451,7 +478,7 @@ internal class LocalCloudStreamServer(
             session.finalUrl = null
         }
 
-    private fun fetch(source: CloudPlaybackSource, range: String?, session: Session): Response {
+    private fun fetch(source: CloudPlaybackSource, range: String?, session: Session, http: OkHttpClient = client): Response {
         val cached = session.finalUrl?.takeIf { session.finalFor === source }
         var url = cached ?: source.url.toHttpUrlOrNull() ?: throw CloudStorageException(CloudFailure.FAILED)
         val originHost = source.url.toHttpUrlOrNull()?.host ?: throw CloudStorageException(CloudFailure.FAILED)
@@ -467,7 +494,7 @@ internal class LocalCloudStreamServer(
                 range?.let { header("Range", it) }
             }.build()
             session.upstreamRequests.incrementAndGet()
-            val call = client.newCall(request)
+            val call = http.newCall(request)
             pendingCalls[call] = session
             val response = try {
                 call.execute()
@@ -564,6 +591,8 @@ internal class LocalCloudStreamServer(
 
     companion object {
         private const val TAG = "CloudStream"
+        private const val BLOCK_ATTEMPTS = 5
+        private val BLOCK_RETRY_DELAYS_MS = longArrayOf(0, 500, 1_000, 2_000)
         internal fun InetAddress.isPrivateOrLocal(): Boolean {
             if (isLoopbackAddress || isSiteLocalAddress || isLinkLocalAddress || isAnyLocalAddress || isMulticastAddress) {
                 return true

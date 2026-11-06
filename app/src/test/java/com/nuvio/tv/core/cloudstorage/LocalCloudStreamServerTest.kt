@@ -30,6 +30,7 @@ class LocalCloudStreamServerTest {
     private val upstreamBytes = AtomicLong()
     private val expiredHits = AtomicInteger()
     private val redirectHits = AtomicInteger()
+    private val stalls = AtomicInteger()
     private val seenCookies = CopyOnWriteArrayList<String?>()
     private val player = OkHttpClient.Builder().retryOnConnectionFailure(false).build()
 
@@ -74,6 +75,22 @@ class LocalCloudStreamServerTest {
                 "/expired" -> { expiredHits.incrementAndGet(); head("403 Forbidden", mapOf("Content-Length" to "0")) }
                 "/redirect-same" -> redirectHits.incrementAndGet().let { head("302 Found", mapOf("Location" to "$base/file", "Content-Length" to "0")) }
                 "/redirect-other" -> head("302 Found", mapOf("Location" to "http://localhost:$port/file", "Content-Length" to "0"))
+                "/stall-once" -> {
+                    val range = headers["range"]
+                    // The block at 2 MiB: its first connection sends nothing, like a stuck CDN node.
+                    if (range?.startsWith("bytes=${2 * 1024 * 1024}-") == true && stalls.getAndIncrement() == 0) {
+                        Thread.sleep(10_000)
+                        return
+                    }
+                    val (startText, endText) = range!!.removePrefix("bytes=").split('-')
+                    val start = startText.toInt()
+                    val end = endText.toIntOrNull()?.coerceAtMost(size - 1) ?: (size - 1)
+                    head(
+                        "206 Partial Content",
+                        mapOf("Content-Range" to "bytes $start-$end/$size", "Content-Type" to "video/mp4", "Content-Length" to (end - start + 1).toString())
+                    )
+                    try { writeCounted(out, start, end + 1) } catch (_: IOException) {}
+                }
                 "/file" -> {
                     seenCookies += headers["cookie"]
                     val range = headers["range"]
@@ -278,6 +295,32 @@ class LocalCloudStreamServerTest {
         val url = open("/file")
         player.newCall(Request.Builder().url(url).header("Range", "bytes=${size + 10}-").build()).execute().use {
             assertEquals(416, it.code)
+        }
+    }
+
+    @Test
+    fun aStalledBlockIsRetriedQuicklyInsteadOfDrainingTheBuffer() {
+        val quick = LocalCloudStreamServer(
+            OkHttpClient.Builder().followRedirects(false).build(),
+            allowPrivateUpstream = true,
+            blockStallMs = 500,
+        )
+        try {
+            val url = quick.open("a.mkv", size.toLong(), "video/x-matroska") { _ ->
+                CloudPlaybackSource("$base/stall-once", mapOf("Cookie" to "ndus=test"), size.toLong())
+            }
+            val started = System.currentTimeMillis()
+            player.newCall(Request.Builder().url(url).header("Range", "bytes=0-${6 * 1024 * 1024 - 1}").build()).execute().use {
+                assertEquals(206, it.code)
+                val body = it.body!!.bytes()
+                assertEquals(6 * 1024 * 1024, body.size)
+                assertEquals(byteAt(3 * 1024 * 1024), body[3 * 1024 * 1024])
+            }
+            val elapsed = System.currentTimeMillis() - started
+            assertTrue("took $elapsed ms", elapsed < 5_000)
+            assertEquals(2, stalls.get())
+        } finally {
+            quick.stop()
         }
     }
 }
