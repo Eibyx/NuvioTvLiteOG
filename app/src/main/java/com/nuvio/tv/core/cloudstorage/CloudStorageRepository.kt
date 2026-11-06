@@ -84,7 +84,13 @@ class CloudStorageRepository internal constructor(
     }
 
     /** Verifies the user's own OAuth client and refresh token with Google before anything is stored. */
-    suspend fun addGoogleDrive(name: String, clientId: String, clientSecret: String?, refreshToken: String): CloudAccount {
+    suspend fun addGoogleDrive(
+        name: String,
+        clientId: String,
+        clientSecret: String?,
+        refreshToken: String,
+        rootFolderId: String? = null
+    ): CloudAccount {
         if (clientId.isBlank() || refreshToken.isBlank()) throw CloudStorageException(CloudFailure.AUTH)
         var stored = CloudCredentials(
             driveClientId = clientId.trim(),
@@ -98,7 +104,12 @@ class CloudStorageRepository internal constructor(
             }
         )
         val label = api.accountName()
-        return save(CloudProviderKind.GOOGLE_DRIVE, name.ifBlank { label ?: CloudProviderKind.GOOGLE_DRIVE.displayName }, stored)
+        return save(
+            CloudProviderKind.GOOGLE_DRIVE,
+            name.ifBlank { label ?: CloudProviderKind.GOOGLE_DRIVE.displayName },
+            stored,
+            rootFolderId?.let { CloudFolderRef(id = it, path = "/") }
+        )
     }
 
     /**
@@ -120,11 +131,7 @@ class CloudStorageRepository internal constructor(
                         if (clientId.isNullOrBlank() || refreshToken.isNullOrBlank()) {
                             skipped += remote.name
                         } else {
-                            val account = addGoogleDrive(remote.name, clientId, remote.clientSecret, refreshToken)
-                            remote.rootFolderId?.let { root ->
-                                setFolders(account.id, listOf(CloudFolderRef(id = root, path = "/")))
-                            }
-                            added += account
+                            added += addGoogleDrive(remote.name, clientId, remote.clientSecret, refreshToken, remote.rootFolderId)
                         }
                     }
                     is RcloneRemote.Unsupported -> skipped += remote.name
@@ -140,9 +147,9 @@ class CloudStorageRepository internal constructor(
      * Stores a verified account with its whole drive selected (from the root) and indexes it right
      * away; the user can narrow the folders later.
      */
-    private fun save(kind: CloudProviderKind, name: String, stored: CloudCredentials): CloudAccount {
+    private fun save(kind: CloudProviderKind, name: String, stored: CloudCredentials, folder: CloudFolderRef? = null): CloudAccount {
         ensureLoaded()
-        val root = when (kind) {
+        val root = folder ?: when (kind) {
             CloudProviderKind.GOOGLE_DRIVE -> CloudFolderRef(id = "root", path = "/")
             CloudProviderKind.TERABOX -> CloudFolderRef(id = "/", path = "/")
         }
