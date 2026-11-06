@@ -4,6 +4,11 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 **Firma fija:** desde esta versión, NuvioTvOG se firma siempre con la misma clave. Las próximas versiones se instalan **encima**, conservando la sesión y los ajustes. Las pre-releases anteriores se conservan sin cambios.
 
+## Novedades en 0.6.3
+
+- **Nombre corto de la fuente:** en los resultados, tus cuentas aparecen como **Drive** o **TeraBox**, sin el correo. Con varias cuentas del mismo tipo: «Drive 1», «Drive 2»…
+- **Firma fija:** se instala encima de la 0.6.2 sin desinstalar.
+
 ## Novedades en 0.6.2
 
 - **Reproducción de TeraBox y Drive más rápida y sin cortes:** TeraBox limita la velocidad de cada conexión (también con Premium). Ahora el vídeo se descarga en bloques de 2 MB por varias conexiones a la vez (3 en TVs con poca RAM, unos 8 MB de memoria; 4 en el resto) y se entrega al reproductor en orden.
@@ -66,7 +71,7 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 ## Instalación
 
-> Si tienes **NuvioTvOG 0.4.1, 0.5.0, 0.6.0 o 0.6.1**, instala esta encima: conserva la sesión y los ajustes. Si tienes una anterior (v0.3.0 o v0.4.0, con firma debug), desinstálala una vez antes: `pm uninstall com.eibyx.nuviotvog`. NuvioTV-Lite original no se toca.
+> Si tienes **NuvioTvOG 0.4.1, 0.5.0, 0.6.0, 0.6.1 o 0.6.2**, instala esta encima: conserva la sesión y los ajustes. Si tienes una anterior (v0.3.0 o v0.4.0, con firma debug), desinstálala una vez antes: `pm uninstall com.eibyx.nuviotvog`. NuvioTV-Lite original no se toca.
 
 1. Instala el APK en el TCL. Android lo trata como una aplicación distinta: no pide desinstalar NuvioTV-Lite y no toca sus datos.
 2. Abre **NuvioTvOG** e inicia sesión con el QR de Nuvio (sus datos son independientes).

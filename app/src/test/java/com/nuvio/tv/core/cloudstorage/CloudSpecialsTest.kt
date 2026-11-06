@@ -151,3 +151,23 @@ class CloudSpecialsTest {
         assertEquals(4, matches.size)
     }
 }
+
+class CloudSourceLabelTest {
+    private fun account(id: String, kind: CloudProviderKind, name: String) = CloudAccount(id = id, kind = kind, name = name)
+
+    @Test
+    fun onlyTheProviderNeverTheEmail() {
+        val drive = account("a", CloudProviderKind.GOOGLE_DRIVE, "someone@example.com")
+        val box = account("b", CloudProviderKind.TERABOX, "TeraBox")
+        assertEquals("Drive", cloudSourceLabel(drive, listOf(drive, box)))
+        assertEquals("TeraBox", cloudSourceLabel(box, listOf(drive, box)))
+    }
+
+    @Test
+    fun severalAccountsOfOneKindAreNumbered() {
+        val first = account("a", CloudProviderKind.GOOGLE_DRIVE, "one@example.com")
+        val second = account("b", CloudProviderKind.GOOGLE_DRIVE, "two@example.com")
+        assertEquals("Drive 1", cloudSourceLabel(first, listOf(first, second)))
+        assertEquals("Drive 2", cloudSourceLabel(second, listOf(first, second)))
+    }
+}
