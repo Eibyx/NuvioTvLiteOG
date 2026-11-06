@@ -46,7 +46,8 @@ data class CloudBrowseUiState(
 @HiltViewModel
 class CloudStorageViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val repository: CloudStorageRepository
+    private val repository: CloudStorageRepository,
+    private val cloudStreams: com.nuvio.tv.core.cloudstorage.CloudStreams
 ) : ViewModel() {
     val uiState: StateFlow<CloudStorageUiState> = repository.uiState
 
@@ -58,6 +59,35 @@ class CloudStorageViewModel @Inject constructor(
 
     private val mutableError = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = mutableError.asStateFlow()
+
+    /** accountId → the last speed test's text (null while it runs). */
+    private val mutableSpeed = MutableStateFlow<Map<String, String?>>(emptyMap())
+    val speed: StateFlow<Map<String, String?>> = mutableSpeed.asStateFlow()
+
+    fun speedTest(id: String) {
+        if (mutableSpeed.value.containsKey(id) && mutableSpeed.value[id] == null) return
+        mutableSpeed.update { it + (id to null) }
+        viewModelScope.launch {
+            val text = try {
+                val result = cloudStreams.speedTest(id)
+                val enough = result.fileMbps?.let { result.mbps >= it * 1.2 }
+                listOfNotNull(
+                    context.getString(R.string.cloud_speed_result, "%.1f".format(result.mbps), "%.1f".format(result.startMs / 1000.0)),
+                    result.fileMbps?.let {
+                        context.getString(
+                            if (enough == true) R.string.cloud_speed_enough else R.string.cloud_speed_not_enough,
+                            "%.1f".format(it)
+                        )
+                    } ?: context.getString(R.string.cloud_speed_reference)
+                ).joinToString(" · ")
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                context.getString(R.string.cloud_speed_failed)
+            }
+            mutableSpeed.update { it + (id to text) }
+        }
+    }
 
     private var setupServer: CloudSetupServer? = null
     private var setupTimeout: Job? = null

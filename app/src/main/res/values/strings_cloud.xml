@@ -51,4 +51,12 @@
     <string name="cloud_remove_link_title">Remove link?</string>
     <string name="cloud_remove">Remove</string>
     <string name="cloud_terabox_experimental">TeraBox support is experimental</string>
+    <string name="cloud_speed_test">Test speed</string>
+    <string name="cloud_speed_test_subtitle">Reads part of your largest video the way the player does and measures it</string>
+    <string name="cloud_speed_running">Measuring… (up to 15 s)</string>
+    <string name="cloud_speed_result">%1$s Mbit/s, first byte after %2$s s</string>
+    <string name="cloud_speed_enough">enough for this file (needs %1$s Mbit/s)</string>
+    <string name="cloud_speed_not_enough">not enough for this file (needs %1$s Mbit/s): it will stall</string>
+    <string name="cloud_speed_reference">a Blu-ray 1080p anime episode needs about 5–8 Mbit/s</string>
+    <string name="cloud_speed_failed">Speed test failed: sync the account and try again</string>
 </resources>

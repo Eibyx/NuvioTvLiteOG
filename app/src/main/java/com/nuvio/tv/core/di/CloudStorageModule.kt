@@ -86,7 +86,10 @@ object CloudStorageModule {
             client.newBuilder()
                 .readTimeout(60, TimeUnit.SECONDS)
                 .retryOnConnectionFailure(true)
-                .build()
+                .build(),
+            // 2 MB blocks: 3 at a time on boxes with little RAM (about 8 MB per stream), 4 otherwise.
+            parallelReads = if (DeviceMemoryTier.isLowRam) 3 else 4,
+            chunkBytes = 2 * 1024 * 1024
         )
     )
 
