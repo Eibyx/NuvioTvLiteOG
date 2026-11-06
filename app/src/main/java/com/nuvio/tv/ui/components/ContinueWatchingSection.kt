@@ -36,6 +36,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
+import com.nuvio.tv.ui.theme.motionFocusZoom
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -275,6 +276,7 @@ fun ContinueWatchingSection(
                     isFocused = isCardFocused,
                     posterTitleOverride = posterTitleOverride,
                     modifier = Modifier
+                        .motionFocusZoom(isCardFocused)
                         .onFocusChanged { focusState ->
                             isCardFocused = focusState.isFocused
                             if (focusState.isFocused) {

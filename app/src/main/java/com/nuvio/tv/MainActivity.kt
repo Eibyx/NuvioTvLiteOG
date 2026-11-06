@@ -630,10 +630,15 @@ open class MainActivity : ComponentActivity() {
                 settingsUiStyle = mainUiPrefs.settingsUiStyle
             ) {
                 val defaultBringIntoViewSpec = LocalBringIntoViewSpec.current
-                val bringIntoViewSpec = if (mainUiPrefs.smoothBringIntoViewEnabled) {
-                    NuvioScrollDefaults.smoothScrollSpec
-                } else {
-                    defaultBringIntoViewSpec
+                val motionStyle by themeDataStore.motionStyle
+                    .collectAsState(initial = com.nuvio.tv.ui.theme.MotionStyle.ORIGINAL)
+                val bringIntoViewSpec = remember(mainUiPrefs.smoothBringIntoViewEnabled, motionStyle, defaultBringIntoViewSpec) {
+                    val base = if (mainUiPrefs.smoothBringIntoViewEnabled) {
+                        NuvioScrollDefaults.smoothScrollSpec
+                    } else {
+                        defaultBringIntoViewSpec
+                    }
+                    com.nuvio.tv.ui.theme.motionScrollSpec(motionStyle, base)
                 }
                 val systemDensity = LocalDensity.current
                 val systemConfiguration = LocalConfiguration.current
@@ -730,6 +735,7 @@ open class MainActivity : ComponentActivity() {
                     LocalDensity provides clampedFontScaleDensity,
                     LocalConfiguration provides uiScaledConfiguration,
                     LocalBringIntoViewSpec provides bringIntoViewSpec,
+                    com.nuvio.tv.ui.theme.LocalMotionStyle provides motionStyle,
                     LocalFastHorizontalNavigationEnabled provides mainUiPrefs.fastHorizontalNavigationEnabled,
                     LocalRecompositionHighlighterEnabled provides highlighterEnabled,
                     LocalCardDepthStyle provides mainUiPrefs.cardDepthStyle,

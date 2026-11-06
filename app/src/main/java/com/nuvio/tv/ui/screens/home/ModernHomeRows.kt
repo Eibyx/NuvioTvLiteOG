@@ -66,6 +66,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.focus.onFocusChanged
+import com.nuvio.tv.ui.theme.motionFocusZoom
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -212,6 +213,7 @@ private fun ModernContinueWatchingRowItem(
         cornerRadius = continueWatchingCornerRadius,
         isFocused = isCardFocused,
         modifier = modifier
+            .motionFocusZoom(isCardFocused)
             .focusRequester(requester)
             .onFocusChanged {
                 isCardFocused = it.isFocused
@@ -1325,6 +1327,7 @@ private fun ModernCarouselCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(cardHeight)
+                .motionFocusZoom(isFocused, paused = isFastScrolling)
                 .focusRequester(focusRequester)
                 .onFocusChanged {
                     isFocused = it.isFocused

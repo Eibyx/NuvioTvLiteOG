@@ -36,6 +36,7 @@ class ThemeDataStore @Inject constructor(
     private val amoledSurfacesModeKey = booleanPreferencesKey("amoled_surfaces_mode")
     private val settingsUiStyleKey = stringPreferencesKey("settings_ui_style")
     private val uiScalePercentKey = intPreferencesKey(UiScale.PREFERENCE_KEY)
+    private val motionStyleKey = stringPreferencesKey(com.nuvio.tv.ui.theme.MotionStyle.PREFERENCE_KEY)
 
     val themeSelection: Flow<ThemeSelection> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs ->
@@ -82,6 +83,14 @@ class ThemeDataStore @Inject constructor(
 
     val uiScalePercent: Flow<Int> = profileManager.activeProfileId.flatMapLatest { pid ->
         factory.get(pid, FEATURE).data.map { prefs -> UiScale.orDefault(prefs[uiScalePercentKey]) }
+    }
+
+    val motionStyle: Flow<com.nuvio.tv.ui.theme.MotionStyle> = profileManager.activeProfileId.flatMapLatest { pid ->
+        factory.get(pid, FEATURE).data.map { prefs -> com.nuvio.tv.ui.theme.MotionStyle.fromStored(prefs[motionStyleKey]) }
+    }
+
+    suspend fun setMotionStyle(style: com.nuvio.tv.ui.theme.MotionStyle) {
+        store().edit { prefs -> prefs[motionStyleKey] = style.name }
     }
 
     suspend fun setUiScalePercent(percent: Int) {

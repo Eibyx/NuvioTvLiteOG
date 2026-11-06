@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_motion">Animations</string>
+    <string name="appearance_motion_subtitle">Focus zoom on posters, row scrolling and screen transitions</string>
+    <string name="appearance_motion_dialog">Applies at once. On TVs with little memory the smooth styles can stutter while rows load.</string>
+    <string name="appearance_motion_original">Original</string>
+    <string name="appearance_motion_smooth">Smooth</string>
+    <string name="appearance_motion_cinematic">Cinematic (Arc style)</string>
+    <string name="appearance_motion_original_hint">As in Lite: light zoom and quick fades</string>
+    <string name="appearance_motion_smooth_hint">Posters grow 4 %, gentler scrolling and fades</string>
+    <string name="appearance_motion_cinematic_hint">Posters grow 6 %, gliding rows, screens fade and zoom in</string>
+</resources>

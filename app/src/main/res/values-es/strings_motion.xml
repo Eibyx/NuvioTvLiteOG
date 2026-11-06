@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="appearance_motion">Animaciones</string>
+    <string name="appearance_motion_subtitle">Zoom al enfocar pósters, desplazamiento de las filas y transiciones entre pantallas</string>
+    <string name="appearance_motion_dialog">Se aplica al momento. En TVs con poca memoria los estilos suaves pueden dar tirones mientras cargan las filas.</string>
+    <string name="appearance_motion_original">Original</string>
+    <string name="appearance_motion_smooth">Suave</string>
+    <string name="appearance_motion_cinematic">Cinematográfica (estilo Arc)</string>
+    <string name="appearance_motion_original_hint">Como en Lite: zoom ligero y fundidos rápidos</string>
+    <string name="appearance_motion_smooth_hint">Los pósters crecen un 4 %, desplazamiento y fundidos más suaves</string>
+    <string name="appearance_motion_cinematic_hint">Los pósters crecen un 6 %, las filas se deslizan y las pantallas aparecen con zoom</string>
+</resources>

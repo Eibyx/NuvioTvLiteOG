@@ -786,7 +786,7 @@ private fun DiscoverActionCard(
                     shape = cardShape
                 )
             ),
-            scale = CardDefaults.scale(focusedScale = posterCardStyle.focusedScale)
+            scale = CardDefaults.scale(focusedScale = com.nuvio.tv.ui.theme.motionFocusScale(posterCardStyle.focusedScale))
         ) {
             Box(
                 modifier = Modifier

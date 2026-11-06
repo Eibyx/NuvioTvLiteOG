@@ -115,6 +115,20 @@ private fun PlaybackNavHost(
         )
     }
 
+    val motion = com.nuvio.tv.ui.theme.LocalMotionStyle.current
+    val motionMs = motion.screenTransitionMs
+    val screenIn = if (motion.scaleScreens) {
+        fadeIn(animationSpec = com.nuvio.tv.ui.theme.motionTween<Float>(motionMs)) +
+            androidx.compose.animation.scaleIn(initialScale = 0.97f, animationSpec = com.nuvio.tv.ui.theme.motionTween<Float>(motionMs))
+    } else {
+        fadeIn(animationSpec = com.nuvio.tv.ui.theme.motionTween<Float>(motionMs))
+    }
+    val screenOut = if (motion.scaleScreens) {
+        fadeOut(animationSpec = com.nuvio.tv.ui.theme.motionTween<Float>(motionMs)) +
+            androidx.compose.animation.scaleOut(targetScale = 1.02f, animationSpec = com.nuvio.tv.ui.theme.motionTween<Float>(motionMs))
+    } else {
+        fadeOut(animationSpec = com.nuvio.tv.ui.theme.motionTween<Float>(motionMs))
+    }
     NavHost(
         navController = navController,
         startDestination = startDestination,
@@ -127,7 +141,7 @@ private fun PlaybackNavHost(
             if (isStreamToPlayer(from, to) && isAutoPlayNav) {
                 EnterTransition.None
             } else {
-                fadeIn(animationSpec = tween(NuvioMotion.tokens.durations.fast))
+                screenIn
             }
         },
         exitTransition = {
@@ -139,7 +153,7 @@ private fun PlaybackNavHost(
             if (isStreamToPlayer(from, to) && isAutoPlayNav) {
                 ExitTransition.None
             } else {
-                fadeOut(animationSpec = tween(NuvioMotion.tokens.durations.fast))
+                screenOut
             }
         },
         popEnterTransition = {
@@ -151,7 +165,7 @@ private fun PlaybackNavHost(
             if (isPlayerToStream(from, to) && isAutoPlayNav) {
                 EnterTransition.None
             } else {
-                fadeIn(animationSpec = tween(NuvioMotion.tokens.durations.fast))
+                screenIn
             }
         },
         popExitTransition = {
@@ -163,7 +177,7 @@ private fun PlaybackNavHost(
             if (isPlayerToStream(from, to) && isAutoPlayNav) {
                 ExitTransition.None
             } else {
-                fadeOut(animationSpec = tween(NuvioMotion.tokens.durations.fast))
+                screenOut
             }
         }
     ) {

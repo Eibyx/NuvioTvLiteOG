@@ -42,6 +42,7 @@ class ThemeSettingsViewModelTest {
         every { amoledSurfacesMode } returns flowOf(false)
         every { settingsUiStyle } returns flowOf(SettingsUiStyle.CLASSIC)
         every { uiScalePercent } returns flowOf(100)
+        every { motionStyle } returns flowOf(com.nuvio.tv.ui.theme.MotionStyle.ORIGINAL)
         coEvery { setCustomTheme(any()) } coAnswers {
             selection.value = ThemeSelection(AppTheme.CUSTOM, firstArg())
         }

@@ -106,6 +106,7 @@ fun ThemeSettingsContent(
     val appIconState by viewModel.appIconState.collectAsStateWithLifecycle()
     var showFontDialog by remember { mutableStateOf(false) }
     var showUiScaleDialog by remember { mutableStateOf(false) }
+    var showMotionDialog by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showAppIconDialog by remember { mutableStateOf(false) }
     var showCustomThemeDialog by remember(uiState.customThemeGradientEnabled) { mutableStateOf(false) }
@@ -330,6 +331,12 @@ fun ThemeSettingsContent(
                     onClick = { showUiScaleDialog = true }
                 )
                 SettingsActionRow(
+                    title = stringResource(R.string.appearance_motion),
+                    subtitle = stringResource(R.string.appearance_motion_subtitle),
+                    value = motionStyleLabel(uiState.motionStyle),
+                    onClick = { showMotionDialog = true }
+                )
+                SettingsActionRow(
                     title = stringResource(R.string.appearance_language),
                     subtitle = stringResource(R.string.appearance_language_subtitle),
                     value = currentLocaleName,
@@ -349,6 +356,30 @@ fun ThemeSettingsContent(
                 showCustomThemeDialog = false
             },
             onDismiss = { showCustomThemeDialog = false }
+        )
+    }
+
+    if (showMotionDialog) {
+        SettingsSingleChoiceDialog(
+            title = stringResource(R.string.appearance_motion),
+            subtitle = stringResource(R.string.appearance_motion_dialog),
+            options = com.nuvio.tv.ui.theme.MotionStyle.entries.map { style ->
+                SettingsPickerOption(
+                    style,
+                    motionStyleLabel(style),
+                    when (style) {
+                        com.nuvio.tv.ui.theme.MotionStyle.ORIGINAL -> stringResource(R.string.appearance_motion_original_hint)
+                        com.nuvio.tv.ui.theme.MotionStyle.SMOOTH -> stringResource(R.string.appearance_motion_smooth_hint)
+                        com.nuvio.tv.ui.theme.MotionStyle.CINEMATIC -> stringResource(R.string.appearance_motion_cinematic_hint)
+                    }
+                )
+            },
+            selectedValue = uiState.motionStyle,
+            onOptionSelected = { style ->
+                viewModel.onEvent(ThemeSettingsEvent.SelectMotionStyle(style))
+                showMotionDialog = false
+            },
+            onDismiss = { showMotionDialog = false }
         )
     }
 
@@ -643,4 +674,11 @@ private fun AppTheme.localizedName(): String = when (this) {
     AppTheme.AMBER -> stringResource(R.string.theme_color_amber)
     AppTheme.ROSE -> stringResource(R.string.theme_color_rose)
     AppTheme.WHITE -> stringResource(R.string.theme_color_white)
+}
+
+@Composable
+private fun motionStyleLabel(style: com.nuvio.tv.ui.theme.MotionStyle): String = when (style) {
+    com.nuvio.tv.ui.theme.MotionStyle.ORIGINAL -> stringResource(R.string.appearance_motion_original)
+    com.nuvio.tv.ui.theme.MotionStyle.SMOOTH -> stringResource(R.string.appearance_motion_smooth)
+    com.nuvio.tv.ui.theme.MotionStyle.CINEMATIC -> stringResource(R.string.appearance_motion_cinematic)
 }

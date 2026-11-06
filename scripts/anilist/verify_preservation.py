@@ -107,6 +107,24 @@ CLOUD_STORAGE = {
     'app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsDesignSystem.kt',
 }
 ALLOWED |= CLOUD_STORAGE
+# Owner-requested Animations setting (Original / Smooth / Cinematic, the last after Nuvio Arc's
+# cinematic focus): poster focus zoom, row scroll spring and screen transitions.
+MOTION_STYLE = {
+    'app/src/main/java/com/nuvio/tv/MainActivity.kt',
+    'app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt',
+    'app/src/main/java/com/nuvio/tv/ui/components/ContentCard.kt',
+    'app/src/main/java/com/nuvio/tv/ui/components/GridContentCard.kt',
+    'app/src/main/java/com/nuvio/tv/ui/components/CollectionRowSection.kt',
+    'app/src/main/java/com/nuvio/tv/ui/components/CatalogRowSection.kt',
+    'app/src/main/java/com/nuvio/tv/ui/components/ContinueWatchingSection.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/search/SearchDiscoverSection.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/home/GridHomeContent.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRows.kt',
+    'app/src/main/java/com/nuvio/tv/data/local/ThemeDataStore.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/settings/ThemeSettingsScreen.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/settings/ThemeSettingsViewModel.kt',
+}
+ALLOWED |= MOTION_STYLE
 PROTECTED = [
     'app/src/main/java/com/nuvio/tv/core/auth/AuthManager.kt',
     'app/src/main/java/com/nuvio/tv/core/di/SupabaseModule.kt',

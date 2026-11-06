@@ -38,7 +38,8 @@ data class ThemeSettingsUiState(
     val amoledSurfacesMode: Boolean = false,
     val settingsUiStyle: SettingsUiStyle = SettingsUiStyle.CLASSIC,
     val availableSettingsUiStyles: List<SettingsUiStyle> = SettingsUiStyle.entries.toList(),
-    val uiScalePercent: Int = UiScale.DEFAULT_PERCENT
+    val uiScalePercent: Int = UiScale.DEFAULT_PERCENT,
+    val motionStyle: com.nuvio.tv.ui.theme.MotionStyle = com.nuvio.tv.ui.theme.MotionStyle.ORIGINAL
 )
 
 sealed class ThemeSettingsEvent {
@@ -49,6 +50,7 @@ sealed class ThemeSettingsEvent {
     data class ToggleAmoledSurfacesMode(val enabled: Boolean) : ThemeSettingsEvent()
     data class SelectSettingsUiStyle(val style: SettingsUiStyle) : ThemeSettingsEvent()
     data class SelectUiScale(val percent: Int) : ThemeSettingsEvent()
+    data class SelectMotionStyle(val style: com.nuvio.tv.ui.theme.MotionStyle) : ThemeSettingsEvent()
     data object DismissAppIconFailure : ThemeSettingsEvent()
 }
 
@@ -137,6 +139,11 @@ class ThemeSettingsViewModel @Inject constructor(
                 }
         }
         viewModelScope.launch {
+            themeDataStore.motionStyle
+                .distinctUntilChanged()
+                .collectLatest { style -> _uiState.update { it.copy(motionStyle = style) } }
+        }
+        viewModelScope.launch {
             themeDataStore.uiScalePercent
                 .distinctUntilChanged()
                 .collectLatest { percent ->
@@ -160,6 +167,7 @@ class ThemeSettingsViewModel @Inject constructor(
             is ThemeSettingsEvent.ToggleAmoledSurfacesMode -> setAmoledSurfacesMode(event.enabled)
             is ThemeSettingsEvent.SelectSettingsUiStyle -> selectSettingsUiStyle(event.style)
             is ThemeSettingsEvent.SelectUiScale -> selectUiScale(event.percent)
+            is ThemeSettingsEvent.SelectMotionStyle -> viewModelScope.launch { themeDataStore.setMotionStyle(event.style) }
             ThemeSettingsEvent.DismissAppIconFailure -> appIconManager.clearFailure()
         }
     }

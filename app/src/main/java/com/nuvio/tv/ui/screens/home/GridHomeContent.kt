@@ -1063,7 +1063,7 @@ private fun GridCollectionFolderCard(
                 shape = cardShape
             )
         ),
-        scale = CardDefaults.scale(focusedScale = posterCardStyle.focusedScale),
+        scale = CardDefaults.scale(focusedScale = com.nuvio.tv.ui.theme.motionFocusScale(posterCardStyle.focusedScale)),
         glow = cardGlow
     ) {
         Box(

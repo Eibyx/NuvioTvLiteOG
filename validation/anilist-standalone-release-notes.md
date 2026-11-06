@@ -4,6 +4,15 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 **Firma fija:** desde esta versión, NuvioTvOG se firma siempre con la misma clave. Las próximas versiones se instalan **encima**, conservando la sesión y los ajustes. Las pre-releases anteriores se conservan sin cambios.
 
+## Novedades en 0.6.4
+
+- **Animaciones:** Ajustes → Apariencia → **Animaciones** (junto a Tamaño de la interfaz):
+  - **Original:** como en Lite (zoom ligero del 2 % y fundidos rápidos).
+  - **Suave:** los pósters crecen un 4 % al enfocarlos, las filas se deslizan sin rebote y las pantallas se funden algo más despacio.
+  - **Cinematográfica (estilo Arc):** los pósters crecen un 6 %, las filas se deslizan más lentas y las pantallas aparecen con un pequeño zoom.
+  - Se aplica al momento, también a «Continuar viendo» y al inicio moderno. El zoom se pausa mientras las filas se recorren rápido. En TVs con poca memoria los estilos suaves pueden dar tirones mientras cargan las filas.
+- **Firma fija:** se instala encima de la 0.6.3 sin desinstalar.
+
 ## Novedades en 0.6.3
 
 - **Conexiones simultáneas por cuenta:** Ajustes → Descubrimiento de contenido → Almacenamiento en la nube → tu cuenta → **Conexiones simultáneas**: Automático (3 en TVs con poca RAM, 4 en el resto), 1 conexión (como antes de la 0.6.2), 2, 3 o 4. Así puedes dejar Drive con 1 y TeraBox con varias. Se aplica desde el siguiente vídeo.
@@ -75,7 +84,7 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 ## Instalación
 
-> Si tienes **NuvioTvOG 0.4.1, 0.5.0, 0.6.0, 0.6.1 o 0.6.2**, instala esta encima: conserva la sesión y los ajustes. Si tienes una anterior (v0.3.0 o v0.4.0, con firma debug), desinstálala una vez antes: `pm uninstall com.eibyx.nuviotvog`. NuvioTV-Lite original no se toca.
+> Si tienes **NuvioTvOG 0.4.1, 0.5.0, 0.6.0, 0.6.1, 0.6.2 o 0.6.3**, instala esta encima: conserva la sesión y los ajustes. Si tienes una anterior (v0.3.0 o v0.4.0, con firma debug), desinstálala una vez antes: `pm uninstall com.eibyx.nuviotvog`. NuvioTV-Lite original no se toca.
 
 1. Instala el APK en el TCL. Android lo trata como una aplicación distinta: no pide desinstalar NuvioTV-Lite y no toca sus datos.
 2. Abre **NuvioTvOG** e inicia sesión con el QR de Nuvio (sus datos son independientes).
