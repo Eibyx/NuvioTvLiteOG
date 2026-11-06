@@ -64,14 +64,16 @@ class CloudStreams internal constructor(
             .filter { it.indexedFiles > 0 || it.manualLinks.isNotEmpty() }
             .ifEmpty { return emptyList() }
         accounts.forEach(repository::refreshIfStale)
+        val all = repository.accounts()
         return accounts.map { account ->
-            ServerStreamSource(name = account.sourceLabel(), preferred = account.showFirst, limited = true) {
-                streams(account, type, videoId, season, episode)
+            val label = cloudSourceLabel(account, all)
+            ServerStreamSource(name = label, preferred = account.showFirst, limited = true) {
+                streams(account, label, type, videoId, season, episode)
             }
         }
     }
 
-    private suspend fun streams(account: CloudAccount, type: String, videoId: String, season: Int?, episode: Int?): List<Stream> {
+    private suspend fun streams(account: CloudAccount, label: String, type: String, videoId: String, season: Int?, episode: Int?): List<Stream> {
         val request = request(type, videoId, season, episode) ?: return emptyList()
         return withContext(Dispatchers.Default) {
             val snapshot = repository.index(account.id) ?: return@withContext emptyList()
@@ -80,7 +82,7 @@ class CloudStreams internal constructor(
             matches.take(MAX_RESULTS).map { match ->
                 val sidecars = CloudSidecarSubtitles.find(match.file, snapshot.subtitles)
                 synchronized(lock) { recent[key(account.id, match.file.id)] = MatchedFile(match.file, sidecars) }
-                match.toStream(account, request, sidecars)
+                match.toStream(account, label, request, sidecars)
             }
         }
     }
@@ -256,7 +258,7 @@ class CloudStreams internal constructor(
      * headline carries quality, source and container; then a few short lines. The provider is not
      * repeated: the source group header already names it.
      */
-    private fun CloudMatch.toStream(account: CloudAccount, request: CloudMatchRequest, sidecars: List<CloudSidecarSubtitle>): Stream {
+    private fun CloudMatch.toStream(account: CloudAccount, label: String, request: CloudMatchRequest, sidecars: List<CloudSidecarSubtitle>): Stream {
         val lines = cloudCardLines(this, request, sidecars)
         return Stream(
             name = lines.headline.ifBlank { file.name },
@@ -275,7 +277,7 @@ class CloudStreams internal constructor(
                 videoSize = file.sizeBytes.takeIf { it > 0 },
                 filename = file.name
             ),
-            addonName = account.sourceLabel(),
+            addonName = label,
             addonLogo = null,
             serverTarget = ServerPlaybackTarget(ServerItemRef("$CONNECTION_PREFIX${account.id}", file.id), mediaSourceId = null)
         )
@@ -295,8 +297,19 @@ class CloudStreams internal constructor(
     }
 }
 
-internal fun CloudAccount.sourceLabel(): String =
-    if (name.equals(kind.displayName, ignoreCase = true)) kind.displayName else "${kind.displayName} · $name"
+/**
+ * The source group's name in stream results: just `Drive` or `TeraBox`, never the account's
+ * e-mail. With several accounts of one kind they are numbered in the order they were added.
+ */
+internal fun cloudSourceLabel(account: CloudAccount, accounts: List<CloudAccount>): String {
+    val short = when (account.kind) {
+        CloudProviderKind.GOOGLE_DRIVE -> "Drive"
+        CloudProviderKind.TERABOX -> "TeraBox"
+    }
+    val sameKind = accounts.filter { it.kind == account.kind }
+    if (sameKind.size <= 1) return short
+    return "$short ${sameKind.indexOfFirst { it.id == account.id } + 1}"
+}
 
 /** [mbps] after the first byte; [startMs] until the first byte; [fileMbps] when the duration is known. */
 data class CloudSpeedResult(val fileName: String, val mbps: Double, val startMs: Long, val fileMbps: Double?)
