@@ -14,9 +14,14 @@ añadir una cuenta, tras 5 códigos erróneos o a los 10 minutos, y nunca devuel
 
 ## Google Drive
 
-Requiere **tu propio cliente OAuth** (Google Cloud Console) y un *refresh token* con alcance
-`drive.readonly`, igual que un remoto `drive` de rclone con `client_id` propio. Se pega el client
-ID, el secret y el refresh token, o el `rclone.conf` sin cifrar.
+Requiere **tu propio cliente OAuth** de tipo «App de escritorio» (Google Cloud Console), con Google
+Drive API activada y la app publicada (en modo prueba el acceso caduca a los 7 días).
+
+Inicio de sesión desde el móvil: client ID + secreto → «Iniciar sesión con Google» → aceptar →
+Google lleva el navegador a `http://127.0.0.1:53682/?state=…&code=…` (no carga en el móvil, es lo
+esperado) → pegar esa dirección. La TV comprueba `state` y canjea el código con PKCE; el verificador
+no sale de la TV y la página nunca recibe el refresh token. Alternativas: pegar un refresh token o
+un `rclone.conf` sin cifrar.
 
 No hay inicio de sesión con código en la TV: el flujo OAuth para dispositivos de entrada limitada
 de Google solo admite `drive.file` y `drive.appdata` (y perfil/YouTube), no `drive.readonly`, que

@@ -108,4 +108,25 @@ class CloudSetupHandlerTest {
         val result = handler.post("/api/terabox", """{"code":"123456","cookie":"x","domain":"https://evil.example.com"}""")
         assertTrue(result.body.contains("unsupported"))
     }
+
+    @Test
+    fun driveWithoutRefreshTokenSaysSo() = runTest {
+        val handler = CloudSetupHandler(CloudSetupMode.ACCOUNTS, "123456", repository(), null, {}, {})
+        val result = handler.post("/api/drive", """{"code":"123456","clientId":"1-abcdefgh.apps.googleusercontent.com","clientSecret":"x"}""")
+        assertTrue(result.body.contains("missing_refresh_token"))
+        assertFalse(handler.finished)
+    }
+
+    @Test
+    fun signInStartReturnsOnlyTheConsentPage() = runTest {
+        val handler = CloudSetupHandler(CloudSetupMode.ACCOUNTS, "123456", repository(), null, {}, {})
+        val result = handler.post(
+            "/api/drive/start",
+            """{"code":"123456","clientId":"1234567890-abcdefghijk.apps.googleusercontent.com","clientSecret":"fake-secret-value"}"""
+        )
+        assertEquals(200, result.status)
+        assertTrue(result.body.contains("accounts.google.com"))
+        assertFalse(result.body.contains("fake-secret-value"))
+        assertFalse(handler.finished)
+    }
 }

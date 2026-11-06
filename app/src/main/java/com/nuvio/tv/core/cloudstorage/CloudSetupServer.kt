@@ -28,7 +28,9 @@ internal data class CloudSetupRequest(
     val fileId: String = "",
     val contentId: String = "",
     val season: Int? = null,
-    val episode: Int? = null
+    val episode: Int? = null,
+    /** The address Google sent the phone to after consent (`http://127.0.0.1:53682/?code=…`). */
+    val redirect: String = ""
 ) {
     override fun toString(): String = "CloudSetupRequest(<redacted>)"
 }
@@ -38,7 +40,9 @@ internal data class CloudSetupReply(
     val ok: Boolean,
     val message: String = "",
     val done: Boolean = false,
-    val files: List<CloudSetupFile> = emptyList()
+    val files: List<CloudSetupFile> = emptyList(),
+    /** Google's consent page, for the phone to open. Holds no secret. */
+    val url: String? = null
 )
 
 @Serializable
@@ -82,7 +86,20 @@ class CloudSetupHandler internal constructor(
                     val account = repository.addTeraBox(request.name, request.cookie, request.domain.ifBlank { null })
                     finish(account.name)
                 }
+                CloudSetupMode.ACCOUNTS to "/api/drive/start" -> {
+                    if (request.clientId.isBlank()) return reply(422, CloudSetupReply(false, "missing_client_id"))
+                    val url = repository.driveSignIn.start(request.clientId, request.clientSecret.ifBlank { null })
+                    reply(200, CloudSetupReply(true, "signin_started", url = url))
+                }
+                CloudSetupMode.ACCOUNTS to "/api/drive/finish" -> {
+                    if (request.redirect.isBlank()) return reply(422, CloudSetupReply(false, "no_code"))
+                    val result = repository.driveSignIn.finish(request.redirect)
+                    val account = repository.addGoogleDrive(request.name, result.clientId, result.clientSecret, result.refreshToken)
+                    finish(account.name)
+                }
                 CloudSetupMode.ACCOUNTS to "/api/drive" -> {
+                    if (request.clientId.isBlank()) return reply(422, CloudSetupReply(false, "missing_client_id"))
+                    if (request.refreshToken.isBlank()) return reply(422, CloudSetupReply(false, "missing_refresh_token"))
                     val account = repository.addGoogleDrive(
                         request.name,
                         request.clientId,
@@ -107,6 +124,8 @@ class CloudSetupHandler internal constructor(
             throw error
         } catch (error: RcloneConfigException) {
             reply(422, CloudSetupReply(false, "rclone_${error.message}"))
+        } catch (error: CloudStorageException) {
+            reply(422, CloudSetupReply(false, error.detail ?: error.failure.name.lowercase()))
         } catch (error: Exception) {
             reply(422, CloudSetupReply(false, error.cloudFailure().name.lowercase()))
         }

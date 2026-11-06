@@ -39,7 +39,10 @@ internal class GoogleDriveApi(
         }
         val response = send(CloudHttpRequest("POST", TOKEN_URL, form = form))
         if (!response.isSuccess) {
-            throw CloudStorageException(if (response.status in 400..401) CloudFailure.AUTH else CloudFailure.FAILED)
+            throw CloudStorageException(
+                if (response.status in 400..401) CloudFailure.AUTH else CloudFailure.FAILED,
+                detail = googleTokenError(response.body)
+            )
         }
         val json = parse(response.body)
         val token = json.string("access_token") ?: throw CloudStorageException(CloudFailure.AUTH)
@@ -135,14 +138,21 @@ internal class GoogleDriveApi(
             response = send(CloudHttpRequest("GET", url, mapOf("Authorization" to "Bearer ${accessToken(forceRefresh = true)}")))
         }
         if (!response.isSuccess) {
+            val body = response.body
+            val detail = when {
+                response.status == 403 && ("accessNotConfigured" in body || "SERVICE_DISABLED" in body) -> "drive_api_disabled"
+                response.status == 403 && ("insufficientPermissions" in body || "SCOPE_INSUFFICIENT" in body) -> "insufficient_scope"
+                else -> null
+            }
             throw CloudStorageException(
-                when {
+                failure = if (detail == "drive_api_disabled") CloudFailure.FAILED else when {
                     response.status == 401 -> CloudFailure.AUTH
                     response.status == 404 -> CloudFailure.NOT_FOUND
                     response.status == 429 || (response.status == 403 && "ateLimit" in response.body) -> CloudFailure.RATE_LIMITED
                     response.status == 403 -> CloudFailure.AUTH
                     else -> CloudFailure.FAILED
                 },
+                detail = detail,
             )
         }
         return parse(response.body)
@@ -187,6 +197,12 @@ internal data class DriveItem(
 internal data class DriveChange(val fileId: String, val removed: Boolean, val file: DriveItem?)
 
 internal data class DriveChanges(val changes: List<DriveChange>, val newStartPageToken: String)
+
+/** The OAuth error code Google returns from its token endpoint (`invalid_client`, `invalid_grant`…). */
+internal fun googleTokenError(body: String): String? =
+    runCatching { (Json.parseToJsonElement(body) as? JsonObject)?.get("error") as? JsonPrimitive }
+        .getOrNull()?.contentOrNull
+        ?.takeIf { it.matches(Regex("^[a-z_]{3,40}$")) }
 
 private fun parse(body: String): JsonObject =
     runCatching { Json.parseToJsonElement(body).jsonObject }.getOrNull()
