@@ -1695,6 +1695,17 @@ internal fun PlayerRuntimeController.tryAutoSelectPreferredSubtitleFromAvailable
         Log.d(PlayerRuntimeController.TAG, "AUTO_SUB stop: server is burning in a subtitle")
         return
     }
+    // Kai: the user's own folder subtitle for this episode comes first ("Elegir automáticamente").
+    autoSelectableLibrarySubtitle()?.let { library ->
+        autoSelectLibrarySubtitle(library)
+        return
+    }
+    // A folder subtitle chosen automatically is not replaced by an add-on or embedded one.
+    if (subtitleLibraryState.autoSelectedId != null &&
+        _uiState.value.selectedAddonSubtitle.let { it == null || it.isLibrarySubtitle() }
+    ) {
+        return
+    }
     val state = _uiState.value
     val preferredTargets = subtitleLanguageTargets()
     val primaryTarget = preferredTargets.firstOrNull()

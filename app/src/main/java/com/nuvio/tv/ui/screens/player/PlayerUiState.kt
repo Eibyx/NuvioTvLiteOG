@@ -248,7 +248,10 @@ data class PlayerUiState(
     // When true, suppress all torrent stats text (buffer, seeds, peers, speed)
     // from loading overlay, rebuffering indicator, and corner overlay.
     val hideTorrentStats: Boolean = true,
-    val isLive: Boolean = false
+    val isLive: Boolean = false,
+    // The user's subtitle folders (Kai)
+    val subtitleLibraryMenu: SubtitleLibraryMenuState = SubtitleLibraryMenuState(),
+    val subtitleLibraryBrowser: SubtitleLibraryBrowserState? = null
 ) {
     /** Subtitle style to render with, after applying the HDR override for the current video. */
     val effectiveSubtitleStyle: SubtitleStyleSettings
@@ -338,6 +341,7 @@ sealed class PlayerEvent {
     data class OnSelectSubtitleTrack(val index: Int) : PlayerEvent()
     data object OnDisableSubtitles : PlayerEvent()
     data class OnSelectAddonSubtitle(val subtitle: Subtitle) : PlayerEvent()
+    data class OnSubtitleLibrary(val action: SubtitleLibraryAction) : PlayerEvent()
     data class OnSetPlaybackSpeed(val speed: Float) : PlayerEvent()
     data object OnToggleControls : PlayerEvent()
     data object OnShowAudioOverlay : PlayerEvent()

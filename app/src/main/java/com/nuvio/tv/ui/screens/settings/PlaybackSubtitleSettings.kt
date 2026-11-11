@@ -1,6 +1,10 @@
 package com.nuvio.tv.ui.screens.settings
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringResource
@@ -93,6 +97,18 @@ internal fun PlaybackSubtitlesSection(
         onToggle = { onUpdate { setSubtitleStripSdh(!style.stripSdh) } },
         enabled = enabled
     )
+
+    // Kai: the user's own subtitle folders (TeraBox, Google Drive, internal storage / USB).
+    var showSubtitleFolders by remember { mutableStateOf(false) }
+    SettingsActionRow(
+        title = stringResource(R.string.subtitle_library_settings_title),
+        subtitle = stringResource(R.string.subtitle_library_settings_desc),
+        enabled = enabled,
+        onClick = { showSubtitleFolders = true }
+    )
+    if (showSubtitleFolders && enabled) {
+        SubtitleFoldersDialog(onDismiss = { showSubtitleFolders = false })
+    }
 
     SettingsSectionLabel(text = stringResource(R.string.sub_style_label))
     SliderSettingsItem(

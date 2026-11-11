@@ -248,6 +248,10 @@ class CloudStorageRepository internal constructor(
     suspend fun browse(id: String, folder: CloudFolderRef?): List<CloudEntry> =
         (provider(id) ?: throw CloudStorageException(CloudFailure.NOT_FOUND)).browse(folder)
 
+    /** Everything directly in [folder], fonts included (subtitle folders). Reads only. */
+    internal suspend fun listFiles(id: String, folder: CloudFolderRef): List<CloudFile> =
+        (provider(id) ?: throw CloudStorageException(CloudFailure.NOT_FOUND)).listFiles(folder)
+
     /** Indexes the account's selected folders. Never downloads, moves or changes a file. */
     suspend fun sync(id: String, force: Boolean = false): Int = syncSnapshot(id, force).files.size
 

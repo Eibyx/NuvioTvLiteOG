@@ -119,6 +119,7 @@ internal suspend fun PlayerRuntimeController.fetchAddonSubtitlesNow(
 }
 
 internal fun PlayerRuntimeController.fetchAddonSubtitles() {
+    startSubtitleLibrarySearchIfNeeded()
     if (buildSubtitleFetchRequest() == null) {
         publishStreamSidecarSubtitlesWithoutAddonFetch()
         return
@@ -233,6 +234,10 @@ internal fun PlayerRuntimeController.withStreamSidecarSubtitles(addonSubtitles: 
 }
 
 internal fun PlayerRuntimeController.filterToVisibleAddonSubtitles(
+    subtitles: List<Subtitle>
+): List<Subtitle> = withLibrarySubtitles(filterToVisibleAddonSubtitlesByLanguage(subtitles.filterNot { it.isLibrarySubtitle() }))
+
+private fun PlayerRuntimeController.filterToVisibleAddonSubtitlesByLanguage(
     subtitles: List<Subtitle>
 ): List<Subtitle> {
     val style = _uiState.value.subtitleStyle

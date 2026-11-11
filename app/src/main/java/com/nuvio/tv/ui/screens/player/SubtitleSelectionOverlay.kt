@@ -101,6 +101,7 @@ internal fun SubtitleSelectionOverlay(
     isLoadingAddons: Boolean,
     useLibass: Boolean = false,
     isUsingMpv: Boolean = false,
+    libraryMenu: SubtitleLibraryMenuState = SubtitleLibraryMenuState(),
     onInternalTrackSelected: (Int) -> Unit,
     onAddonSubtitleSelected: (Subtitle) -> Unit,
     onDisableSubtitles: () -> Unit,
@@ -166,7 +167,8 @@ internal fun SubtitleSelectionOverlay(
             installedAddonOrder = sessionInstalledSubtitleAddonOrder,
             selectedOptionId = activeSelectedOptionId,
             builtInLabel = builtInLabel,
-            forcedLabel = forcedLabel
+            forcedLabel = forcedLabel,
+            libraryDetails = libraryMenu.details
         )
     }
 
@@ -529,6 +531,11 @@ internal fun SubtitleSelectionOverlay(
                         optionEntryLanguageKey = key
                         activeRail = OverlayFocusRail.LANGUAGE
                         activeStyleFocusKey = null
+                    },
+                    extraRows = if (libraryMenu.configured) {
+                        { subtitleLibraryMenuRows(libraryMenu, onEvent) }
+                    } else {
+                        null
                     }
                 )
 
@@ -645,7 +652,8 @@ private fun SubtitleLanguageRail(
     onFocusRequestConsumed: () -> Unit,
     onMoveRight: (() -> Unit)?,
     onLanguageSelected: (String) -> Unit,
-    onLanguageFocused: (String) -> Unit
+    onLanguageFocused: (String) -> Unit,
+    extraRows: (androidx.compose.foundation.lazy.LazyListScope.() -> Unit)? = null
 ) {
     LaunchedEffect(focusToken) {
         if (focusToken <= 0) return@LaunchedEffect
@@ -687,6 +695,8 @@ private fun SubtitleLanguageRail(
                     onFocused = { onLanguageFocused(item.key) }
                 )
             }
+            // Kai: "Mis carpetas de subtítulos" under the languages.
+            extraRows?.invoke(this)
         }
     }
 }
@@ -1931,7 +1941,8 @@ private fun buildSubtitleOptionRailItems(
     installedAddonOrder: List<String>,
     selectedOptionId: String?,
     builtInLabel: String,
-    forcedLabel: String
+    forcedLabel: String,
+    libraryDetails: Map<String, String> = emptyMap()
 ): List<SubtitleOptionRailItem> {
     if (selectedLanguageKey == SubtitleOffLanguageKey) return emptyList()
 
@@ -1947,7 +1958,8 @@ private fun buildSubtitleOptionRailItems(
                 Subtitle.languageCodeToName(PlayerSubtitleUtils.normalizeLanguageCode(subtitle.lang))
             },
             sourceLabel = if (subtitle.isStreamProvided) builtInLabel else subtitle.addonName,
-            meta = subtitle.id.takeIf { it.isNotBlank() && it != subtitle.lang && it != subtitle.url },
+            meta = libraryDetails[subtitle.id]
+                ?: subtitle.id.takeIf { it.isNotBlank() && it != subtitle.lang && it != subtitle.url && !subtitle.isLibrarySubtitle() },
             isSelected = optionId == selectedOptionId,
             addonSubtitle = subtitle
         )

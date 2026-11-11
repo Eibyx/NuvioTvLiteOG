@@ -31,6 +31,13 @@ internal interface CloudProvider {
     /** Where to read [file] from right now. [forceRefresh] asks for a new link after a failure. */
     suspend fun resolve(file: CloudFile, forceRefresh: Boolean): CloudPlaybackSource
 
+    /**
+     * Every file and folder directly in [folder], unfiltered, as [CloudFile]s that [resolve] accepts
+     * (folders included, marked by [CloudFile.mimeType] [CLOUD_FOLDER_MIME]). Used by the subtitle
+     * folders (ported from NuvioArcKai), which need fonts as well. Reads only.
+     */
+    suspend fun listFiles(folder: CloudFolderRef): List<CloudFile>
+
     /** Revokes what can be revoked at the provider. Local secrets are deleted by the caller. */
     suspend fun disconnect() = Unit
 }
@@ -81,6 +88,11 @@ internal class TeraBoxCloudProvider(
             truncated = queue.isNotEmpty() || files.size > limits.maxFiles,
         )
     }
+
+    override suspend fun listFiles(folder: CloudFolderRef): List<CloudFile> =
+        api.list(teraBoxPath(folder.path)).map { item ->
+            item.toCloudFile(if (item.isDir) CLOUD_FOLDER_MIME else cloudMimeTypeFor(item.name))
+        }
 
     private fun TeraBoxItem.toCloudFile(mime: String) = CloudFile(
         id = fsId.toString(),
@@ -217,6 +229,14 @@ internal class GoogleDriveCloudProvider(
     private fun DriveItem.isVideo(): Boolean = mimeType.startsWith("video/") || name.isCloudVideoName()
 
     private fun DriveItem.isSubtitle(): Boolean = name.isCloudSubtitleName() && sizeBytes < MAX_SUBTITLE_BYTES
+
+    override suspend fun listFiles(folder: CloudFolderRef): List<CloudFile> {
+        val parentPath = folder.path.trimEnd('/')
+        return api.children(folder.id).map { item ->
+            val file = item.toCloudFile(parentPath)
+            if (item.isFolder) file.copy(mimeType = CLOUD_FOLDER_MIME) else file
+        }
+    }
 
     private fun DriveItem.toCloudFile(parentPath: String) = CloudFile(
         id = id,

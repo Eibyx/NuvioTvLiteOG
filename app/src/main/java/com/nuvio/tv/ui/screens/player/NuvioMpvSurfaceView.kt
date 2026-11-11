@@ -590,6 +590,25 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         }
     }
 
+    /** mpv's own `sub-fonts-dir`, read before the first change; null until then. */
+    private var originalSubFontsDir: String? = null
+    private var libraryFontsDirActive = false
+
+    private fun applyLibraryFontsDir(url: String) {
+        val path = url.removePrefix("file://")
+        val dir = if (MpvLibraryFonts.hasFontsFor(path)) MpvLibraryFonts.prepare(context, path) else null
+        if (dir != null) {
+            if (!libraryFontsDirActive) {
+                originalSubFontsDir = mpv.getPropertyString("sub-fonts-dir").orEmpty()
+            }
+            mpv.setPropertyString("sub-fonts-dir", dir.absolutePath)
+            libraryFontsDirActive = true
+        } else if (libraryFontsDirActive) {
+            mpv.setPropertyString("sub-fonts-dir", originalSubFontsDir.orEmpty())
+            libraryFontsDirActive = false
+        }
+    }
+
     fun addAndSelectExternalSubtitle(
         url: String,
         title: String? = null,
@@ -598,6 +617,9 @@ class NuvioMpvSurfaceView @JvmOverloads constructor(
         if (!initialized) return false
         if (url.isBlank()) return false
         return runCatching {
+            // The decoder sub-add creates reads sub-fonts-dir now: the folder subtitle's own fonts
+            // (Kai subtitle folders), or mpv's original directory for every other subtitle.
+            applyLibraryFontsDir(url)
             // "cached" avoids duplicate re-loads for the same external subtitle.
             val safeTitle = title?.takeIf { it.isNotBlank() }
             val safeLanguage = language?.takeIf { it.isNotBlank() }

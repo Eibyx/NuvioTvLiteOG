@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- NuvioArcKai: the user's subtitle folders. -->
+<resources>
+    <string name="subtitle_library_origin_terabox">TeraBox</string>
+    <string name="subtitle_library_origin_drive">Drive</string>
+    <string name="subtitle_library_origin_local">USB/Internal</string>
+    <string name="subtitle_library_origin_terabox_long">TeraBox</string>
+    <string name="subtitle_library_origin_drive_long">Google Drive</string>
+    <string name="subtitle_library_origin_local_long">Internal storage / USB</string>
+    <string name="subtitle_library_missing_fonts">Missing fonts: %1$s. The default font will be used.</string>
+    <string name="subtitle_library_usb_disconnected">USB not connected</string>
+    <string name="subtitle_library_connect_account">Connect the account in Media servers</string>
+    <string name="subtitle_library_permission_missing">This folder can no longer be read: add it again</string>
+    <string name="subtitle_library_read_failed">Could not read the folder</string>
+    <string name="subtitle_library_menu_title">My subtitle folders</string>
+    <string name="subtitle_library_searching">Searching my folders…</string>
+    <string name="subtitle_library_browse">Search my folders…</string>
+    <string name="subtitle_library_link">Link folder…</string>
+    <string name="subtitle_library_link_this">Link this folder</string>
+    <string name="subtitle_library_enable_libass">Turn on libass to see this subtitle\'s fonts</string>
+    <string name="subtitle_library_browser_up">‹ Back</string>
+    <string name="subtitle_library_browser_empty">Nothing here</string>
+    <string name="subtitle_library_browser_choose_root">Choose a folder</string>
+    <string name="subtitle_library_loading">Loading…</string>
+    <string name="subtitle_library_settings_title">My subtitle folders</string>
+    <string name="subtitle_library_settings_desc">Your own subtitles, with the fonts in their folder, from TeraBox, Google Drive or this TV\'s storage</string>
+    <string name="subtitle_library_add">Add folder</string>
+    <string name="subtitle_library_choose_origin">Where is the folder?</string>
+    <string name="subtitle_library_enabled">On</string>
+    <string name="subtitle_library_disabled">Off</string>
+    <string name="subtitle_library_refresh">Refresh</string>
+    <string name="subtitle_library_remove">Remove</string>
+    <string name="subtitle_library_refreshed">The folders will be read again</string>
+    <string name="subtitle_library_auto_select">Choose my subtitles automatically</string>
+    <string name="subtitle_library_auto_select_desc">When a file matches the episode and is in your preferred language</string>
+    <string name="subtitle_library_cache_limit">Cache limit</string>
+    <string name="subtitle_library_cache_value">%1$d MB (in use: %2$s)</string>
+    <string name="subtitle_library_clear_cache">Clear cache</string>
+    <string name="subtitle_library_pick_this">Use this folder</string>
+    <string name="subtitle_library_local_method_title">How to read this TV\'s storage</string>
+    <string name="subtitle_library_method_saf">Choose with the file picker</string>
+    <string name="subtitle_library_method_saf_volume">Choose on %1$s</string>
+    <string name="subtitle_library_method_legacy">Browse the storage (asks for the storage permission)</string>
+    <string name="subtitle_library_method_all_files">Browse the storage with “All files access”</string>
+    <string name="subtitle_library_method_adb">This TV has no screen for “All files access”. Grant it once from a computer with: %1$s</string>
+    <string name="subtitle_library_method_phone">Send from the phone</string>
+    <string name="subtitle_library_permission_denied">Permission not granted</string>
+    <string name="subtitle_library_phone_title">Send subtitles from your phone</string>
+    <string name="subtitle_library_phone_steps">Scan the code with a phone on the same Wi-Fi and choose your Subtítulos folder. The files are saved on this TV.</string>
+    <string name="subtitle_library_phone_address">Or open %1$s</string>
+    <string name="subtitle_library_phone_received">Files received: %1$d</string>
+    <string name="subtitle_library_phone_unavailable">Could not start the local server</string>
+    <string name="subtitle_library_phone_folder_name">Sent from the phone</string>
+    <string name="subtitle_library_none">No folders yet</string>
+    <string name="subtitle_library_done">Done</string>
+    <string name="subtitle_library_storage_roots">Storage</string>
+    <plurals name="subtitle_library_fonts_detail">
+        <item quantity="one">%1$s · %2$d font</item>
+        <item quantity="other">%1$s · %2$d fonts</item>
+    </plurals>
+</resources>
