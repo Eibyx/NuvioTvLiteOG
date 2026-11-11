@@ -439,6 +439,7 @@ internal fun PlayerRuntimeController.toSubtitleConfiguration(subtitle: Subtitle)
 }
 
 internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
+    onLibrarySubtitleSelected(subtitle)
     logSwitchTrace(
         stage = "select-addon-subtitle",
         message = "usingMpv=${isUsingMpvEngine()} addonId=${subtitle.id} addonLang=${subtitle.lang} addonName=${subtitle.addonName}"
@@ -458,7 +459,8 @@ internal fun PlayerRuntimeController.selectAddonSubtitle(subtitle: Subtitle) {
         val trackTitle = buildAddonSubtitleTrackId(subtitle)
         AutoSyncSyncedSubtitle.clear() // AutoSync hook
         mpvAddonSubtitleSelectionJob = scope.launch {
-            val localPath = try {
+            // Folder subtitles (Kai) reach mpv as the cached file itself, ASS script unchanged.
+            val localPath = librarySubtitleLocalPath(subtitle) ?: try {
                 val decodedBody = downloadSubtitleBody(subtitle.url, subtitle.lang, subtitle.headers)
                 val sanitized = SubtitleMojibakeSanitizer.sanitize(decodedBody).toString()
                 val cacheDir = java.io.File(context.cacheDir, "subtitles").also { it.mkdirs() }

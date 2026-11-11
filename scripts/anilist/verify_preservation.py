@@ -125,6 +125,19 @@ MOTION_STYLE = {
     'app/src/main/java/com/nuvio/tv/ui/screens/settings/ThemeSettingsViewModel.kt',
 }
 ALLOWED |= MOTION_STYLE
+# Owner-requested subtitle folders with their fonts (ported from Eibyx/NuvioArcKai, GPL-3.0):
+# folder subtitles are ordinary addon-style Subtitles; fonts go to libass in the subtitle parser
+# factory (ExoPlayer) and through sub-fonts-dir right before sub-add (mpv). The other player files
+# it touches are already listed above.
+SUBTITLE_FOLDERS = {
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerLibassCompat.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerRuntimeControllerTrackSelection.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerSubtitleDataSource.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerViewModel.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/player/SubtitleSelectionOverlay.kt',
+    'app/src/main/java/com/nuvio/tv/ui/screens/settings/PlaybackSubtitleSettings.kt',
+}
+ALLOWED |= SUBTITLE_FOLDERS
 PROTECTED = [
     'app/src/main/java/com/nuvio/tv/core/auth/AuthManager.kt',
     'app/src/main/java/com/nuvio/tv/core/di/SupabaseModule.kt',

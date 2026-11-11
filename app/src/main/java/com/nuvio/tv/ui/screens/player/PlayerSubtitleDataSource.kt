@@ -91,7 +91,16 @@ private class SubtitleRoutingDataSource(
         val target = subtitleRequestTarget(dataSpec.uri.toString(), routes)
         val source = when (target) {
             is SubtitleRequestTarget.Routed -> ByteArrayDataSource(fetchSubtitle(target.route, dataSpec))
-            SubtitleRequestTarget.Media -> media.createDataSource()
+            // A local subtitle file (the user's subtitle folders cache) is read by a file source: the
+            // stream's own source can be HTTP-only (cloud loopback streams, parallel range reads).
+            SubtitleRequestTarget.Media -> if (
+                dataSpec.uri.scheme.equals("file", ignoreCase = true) &&
+                dataSpec.uri.getQueryParameter("nuvio_type") == "subtitle"
+            ) {
+                androidx.media3.datasource.FileDataSource()
+            } else {
+                media.createDataSource()
+            }
             SubtitleRequestTarget.Refused -> throw IOException("No subtitle route for a marked subtitle URI")
         }
         transferListeners.forEach(source::addTransferListener)

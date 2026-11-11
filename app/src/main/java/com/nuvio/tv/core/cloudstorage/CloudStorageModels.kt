@@ -133,6 +133,9 @@ internal fun String.isCloudVideoName(): Boolean =
     substringAfterLast('.', "").lowercase() in CLOUD_VIDEO_EXTENSIONS
 
 /** Subtitle files fansub releases ship next to the video (`Show - 02.ass`, `Show - 02.spa.srt`). */
+/** [CloudFile.mimeType] of a folder in [CloudProvider.listFiles] (subtitle folders). */
+internal const val CLOUD_FOLDER_MIME = "inode/directory"
+
 internal val CLOUD_SUBTITLE_EXTENSIONS = setOf("ass", "ssa", "srt", "vtt")
 
 internal fun String.isCloudSubtitleName(): Boolean =

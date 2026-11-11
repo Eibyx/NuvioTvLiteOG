@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- NuvioArcKai: carpetas de subtítulos del usuario. -->
+<resources>
+    <string name="subtitle_library_origin_terabox">TeraBox</string>
+    <string name="subtitle_library_origin_drive">Drive</string>
+    <string name="subtitle_library_origin_local">USB/Interno</string>
+    <string name="subtitle_library_origin_terabox_long">TeraBox</string>
+    <string name="subtitle_library_origin_drive_long">Google Drive</string>
+    <string name="subtitle_library_origin_local_long">Almacenamiento interno / USB</string>
+    <string name="subtitle_library_missing_fonts">Faltan fuentes: %1$s. Se usará la predeterminada.</string>
+    <string name="subtitle_library_usb_disconnected">USB no conectado</string>
+    <string name="subtitle_library_connect_account">Conecta la cuenta en Servidores multimedia</string>
+    <string name="subtitle_library_permission_missing">Ya no se puede leer esta carpeta: vuelve a añadirla</string>
+    <string name="subtitle_library_read_failed">No se pudo leer la carpeta</string>
+    <string name="subtitle_library_menu_title">Mis carpetas de subtítulos</string>
+    <string name="subtitle_library_searching">Buscando en mis carpetas…</string>
+    <string name="subtitle_library_browse">Buscar en mis carpetas…</string>
+    <string name="subtitle_library_link">Vincular carpeta…</string>
+    <string name="subtitle_library_link_this">Vincular esta carpeta</string>
+    <string name="subtitle_library_enable_libass">Activa libass para ver las fuentes de este subtítulo</string>
+    <string name="subtitle_library_browser_up">‹ Atrás</string>
+    <string name="subtitle_library_browser_empty">No hay nada aquí</string>
+    <string name="subtitle_library_browser_choose_root">Elige una carpeta</string>
+    <string name="subtitle_library_loading">Cargando…</string>
+    <string name="subtitle_library_settings_title">Mis carpetas de subtítulos</string>
+    <string name="subtitle_library_settings_desc">Tus propios subtítulos, con las fuentes de su carpeta, desde TeraBox, Google Drive o el almacenamiento del televisor</string>
+    <string name="subtitle_library_add">Añadir carpeta</string>
+    <string name="subtitle_library_choose_origin">¿Dónde está la carpeta?</string>
+    <string name="subtitle_library_enabled">Activada</string>
+    <string name="subtitle_library_disabled">Desactivada</string>
+    <string name="subtitle_library_refresh">Actualizar</string>
+    <string name="subtitle_library_remove">Quitar</string>
+    <string name="subtitle_library_refreshed">Las carpetas se volverán a leer</string>
+    <string name="subtitle_library_auto_select">Elegir automáticamente mis subtítulos</string>
+    <string name="subtitle_library_auto_select_desc">Si un archivo coincide con el episodio y está en tu idioma preferido</string>
+    <string name="subtitle_library_cache_limit">Límite de caché</string>
+    <string name="subtitle_library_cache_value">%1$d MB (en uso: %2$s)</string>
+    <string name="subtitle_library_clear_cache">Vaciar caché</string>
+    <string name="subtitle_library_pick_this">Usar esta carpeta</string>
+    <string name="subtitle_library_local_method_title">Cómo leer el almacenamiento del televisor</string>
+    <string name="subtitle_library_method_saf">Elegir con el selector de archivos</string>
+    <string name="subtitle_library_method_saf_volume">Elegir en %1$s</string>
+    <string name="subtitle_library_method_legacy">Explorar el almacenamiento (pide el permiso de almacenamiento)</string>
+    <string name="subtitle_library_method_all_files">Explorar con «Acceso a todos los archivos»</string>
+    <string name="subtitle_library_method_adb">Este televisor no tiene pantalla para «Acceso a todos los archivos». Concédelo una vez desde una computadora con: %1$s</string>
+    <string name="subtitle_library_method_phone">Enviar desde el celular</string>
+    <string name="subtitle_library_permission_denied">No se concedió el permiso</string>
+    <string name="subtitle_library_phone_title">Enviar subtítulos desde el celular</string>
+    <string name="subtitle_library_phone_steps">Escanea el código con un celular conectado al mismo Wi-Fi y elige tu carpeta Subtítulos. Los archivos se guardan en este televisor.</string>
+    <string name="subtitle_library_phone_address">O abre %1$s</string>
+    <string name="subtitle_library_phone_received">Archivos recibidos: %1$d</string>
+    <string name="subtitle_library_phone_unavailable">No se pudo iniciar el servidor local</string>
+    <string name="subtitle_library_phone_folder_name">Enviados desde el celular</string>
+    <string name="subtitle_library_none">Todavía no hay carpetas</string>
+    <string name="subtitle_library_done">Listo</string>
+    <string name="subtitle_library_storage_roots">Almacenamiento</string>
+    <plurals name="subtitle_library_fonts_detail">
+        <item quantity="one">%1$s · %2$d fuente</item>
+        <item quantity="other">%1$s · %2$d fuentes</item>
+    </plurals>
+</resources>

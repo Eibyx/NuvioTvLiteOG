@@ -1072,7 +1072,8 @@ internal fun PlayerRuntimeController.initializePlayer(
                         playerMediaSourceFactory = mediaSourceFactory,
                         dataSourceFactory = playerDataSourceFactory,
                         extractorsFactory = effectiveExtractorsFactory,
-                        renderersFactory = renderersFactory
+                        renderersFactory = renderersFactory,
+                        libraryFonts = libraryFontRegistry
                     )
             } else {
                 buildDefaultPlayer()
@@ -2072,7 +2073,8 @@ internal fun resolveDeviceAudioLanguages(): List<String> {
 internal suspend fun PlayerRuntimeController.prepareStartupSubtitles(): StartupSubtitlePreparation {
     return StartupSubtitlePreparation(
         fetchedSubtitles = emptyList(),
-        attachedSubtitles = emptyList(),
+        // A folder subtitle found within two seconds joins the first media item (no reload later).
+        attachedSubtitles = awaitStartupLibrarySubtitles(),
         fetchCompleted = false
     )
 }

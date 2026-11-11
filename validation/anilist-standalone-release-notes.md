@@ -4,6 +4,36 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 **Firma fija:** desde esta versión, NuvioTvOG se firma siempre con la misma clave. Las próximas versiones se instalan **encima**, conservando la sesión y los ajustes. Las pre-releases anteriores se conservan sin cambios.
 
+## Pre-release 0.7.0-beta.1: Mis carpetas de subtítulos (con sus fuentes)
+
+**Pre-release de prueba**, no estable. Portado de NuvioArcKai. Se instala encima de la 0.6.4 (misma firma, conserva sesión y ajustes). Android no deja volver a una versión anterior sin desinstalar: si quieres seguir en la estable, quédate en la 0.6.4.
+
+**Qué hace:** al abrir un episodio, busca en tus propias carpetas el subtítulo de ese episodio y carga **solo las fuentes de esa carpeta que el ASS usa de verdad**, para que se vea con su estilo. Ajustes → Reproducción → Subtítulos → **Mis carpetas de subtítulos**.
+
+**Cómo organizar las carpetas** (igual en todos los orígenes):
+
+```
+Subtítulos/
+├── Frieren/
+│   ├── [Grupo] Frieren - 01.ass
+│   ├── FuenteA.ttf
+│   └── Fonts/          ← opcional: Fonts, Fuentes o Attachments
+└── Dandadan/
+    └── Temporada 2/    ← opcional: Temporada N, Season N o SN
+        ├── Dandadan S2 - 03.ass
+        └── Fuente.ttf
+```
+
+- **Orígenes:** almacenamiento interno / USB, «Enviar desde el celular» (QR) y tus cuentas de TeraBox y Google Drive de Almacenamiento en la nube.
+- **Almacenamiento de la TV:** selector de carpetas si la TV lo tiene (con el USB directamente en Android 10+); si no, permiso de archivos (Android 7–10) o «Acceso a todos los archivos» (Android 11+), solo si eliges esa opción; si esa pantalla no existe, se muestra el comando adb. «Enviar desde el celular» funciona siempre.
+- **Búsqueda solo al abrir el episodio** (nada en segundo plano): título y alias (también de AniList), temporada, episodio y numeración absoluta. Si no está claro, «Vincular carpeta…» (se recuerda por serie); nunca adivina. «Buscar en mis carpetas…» elige un archivo a mano (se recuerda por episodio).
+- **Menú de subtítulos:** «Español · USB/Interno» (o «· TeraBox», «· Drive») con el nombre del archivo y «N fuentes»; «USB no conectado», aviso único de fuentes que faltan y atajo para activar libass si está apagado.
+- **Elegir automáticamente mis subtítulos:** activado por defecto. Caché de 100 MB (fuentes de hasta 32 MB por subtítulo y 25 MB por archivo). Configuración por perfil.
+- **Motores:** ExoPlayer con libass (fuentes al crear el subtítulo) y MPV (directorio de fuentes solo para ese subtítulo). Sin carpetas configuradas, el reproductor funciona exactamente como antes.
+- **Permisos nuevos:** leer archivos (Android 7–10) y «Acceso a todos los archivos» (Android 11+), solo cuando eliges esos métodos.
+
+**NO VERIFICADO en un televisor:** fuentes en ExoPlayer y en MPV, USB conectado y desconectado, «Enviar desde el celular», fuente que falta, cambio de episodio y memoria en el TCL de 1 GB.
+
 ## Novedades en 0.6.4
 
 - **Animaciones:** Ajustes → Apariencia → **Animaciones** (junto a Tamaño de la interfaz):
@@ -84,7 +114,7 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 ## Instalación
 
-> Si tienes **NuvioTvOG 0.4.1, 0.5.0, 0.6.0, 0.6.1, 0.6.2 o 0.6.3**, instala esta encima: conserva la sesión y los ajustes. Si tienes una anterior (v0.3.0 o v0.4.0, con firma debug), desinstálala una vez antes: `pm uninstall com.eibyx.nuviotvog`. NuvioTV-Lite original no se toca.
+> Si tienes **NuvioTvOG 0.4.1, 0.5.0, 0.6.0, 0.6.1, 0.6.2, 0.6.3 o 0.6.4**, instala esta encima: conserva la sesión y los ajustes. Si tienes una anterior (v0.3.0 o v0.4.0, con firma debug), desinstálala una vez antes: `pm uninstall com.eibyx.nuviotvog`. NuvioTV-Lite original no se toca.
 
 1. Instala el APK en el TCL. Android lo trata como una aplicación distinta: no pide desinstalar NuvioTV-Lite y no toca sus datos.
 2. Abre **NuvioTvOG** e inicia sesión con el QR de Nuvio (sus datos son independientes).
