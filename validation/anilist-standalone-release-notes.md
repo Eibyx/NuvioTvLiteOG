@@ -4,9 +4,9 @@ NuvioTV-Lite original con la integración experimental de AniList portada desde 
 
 **Firma fija:** desde esta versión, NuvioTvOG se firma siempre con la misma clave. Las próximas versiones se instalan **encima**, conservando la sesión y los ajustes. Las pre-releases anteriores se conservan sin cambios.
 
-## Pre-release 0.7.0-beta.1: Mis carpetas de subtítulos (con sus fuentes)
+## Novedades en 0.7.0: Mis carpetas de subtítulos (con sus fuentes)
 
-**Pre-release de prueba**, no estable. Portado de NuvioArcKai. Se instala encima de la 0.6.4 (misma firma, conserva sesión y ajustes). Android no deja volver a una versión anterior sin desinstalar: si quieres seguir en la estable, quédate en la 0.6.4.
+Portado de NuvioArcKai. Se instala encima de la 0.6.4 o de la 0.7.0-beta.1 (misma firma, conserva sesión y ajustes).
 
 **Qué hace:** al abrir un episodio, busca en tus propias carpetas el subtítulo de ese episodio y carga **solo las fuentes de esa carpeta que el ASS usa de verdad**, para que se vea con su estilo. Ajustes → Reproducción → Subtítulos → **Mis carpetas de subtítulos**.
 
@@ -114,7 +114,7 @@ Subtítulos/
 
 ## Instalación
 
-> Si tienes **NuvioTvOG 0.4.1, 0.5.0, 0.6.0, 0.6.1, 0.6.2, 0.6.3 o 0.6.4**, instala esta encima: conserva la sesión y los ajustes. Si tienes una anterior (v0.3.0 o v0.4.0, con firma debug), desinstálala una vez antes: `pm uninstall com.eibyx.nuviotvog`. NuvioTV-Lite original no se toca.
+> Si tienes **NuvioTvOG 0.4.1, 0.5.0, 0.6.0, 0.6.1, 0.6.2, 0.6.3, 0.6.4 o 0.7.0-beta.1**, instala esta encima: conserva la sesión y los ajustes. Si tienes una anterior (v0.3.0 o v0.4.0, con firma debug), desinstálala una vez antes: `pm uninstall com.eibyx.nuviotvog`. NuvioTV-Lite original no se toca.
 
 1. Instala el APK en el TCL. Android lo trata como una aplicación distinta: no pide desinstalar NuvioTV-Lite y no toca sus datos.
 2. Abre **NuvioTvOG** e inicia sesión con el QR de Nuvio (sus datos son independientes).
